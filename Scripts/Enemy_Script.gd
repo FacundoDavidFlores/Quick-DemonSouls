@@ -21,6 +21,7 @@ const stateMachine_path: String = "parameters/StateMachine/"
 var playback: AnimationNodeStateMachinePlayback
 const animName_Locomotion: String = "Locomotion"
 const animName_Hurt: String = "Hurt"
+var _hurtIndex: int = 1
 const animWeight: float = 0.2
 var animVelocity: Vector2
 #endregion
@@ -31,8 +32,8 @@ func _ready():
 	timer.timeout.connect(OnReset)
 	navigationAgent.velocity_computed.connect(Velocity_computed)
 	#OnReset()
-	AnimationTree_TimeScale(0.5)
-	playback.travel(animName_Locomotion)
+	AnimationTree_TimeScale(1.0)
+	PlayAnimation(animName_Locomotion)
 	if(targetPosition.size() > 0):
 		navigationAgent.target_position = targetPosition[targetPositionIndex].global_position;
 	await NavigateFixer()
@@ -48,14 +49,20 @@ func _physics_process(_delta:float):
 			pass
 #endregion
 #-------------------------------------------------------------------------------
-#region STATEMACHINE FUNCTIONS
-func Kicked():
-	super.Kicked()
+#region CHARACTER FUNCTIONS
+func Player_Attack():
+	super.Player_Attack()
 	myENEMY_STATE = ENEMY_STATE.HURT
 	AnimationTree_TimeScale(1.5)
-	playback.travel(animName_Hurt)
+	if(_hurtIndex == 1):
+		_hurtIndex = 2
+	else:
+		_hurtIndex = 1
+	PlayAnimation(animName_Hurt+str(_hurtIndex))
 	timer.start(flashDuration)
+#endregion
 #-------------------------------------------------------------------------------
+#region STATEMACHINE FUNCTIONS
 func Patrolling(_delta:float):
 	if(!pathFollow3D):
 		return
@@ -92,6 +99,10 @@ func Handle_Rotation(_weight:float):
 #endregion
 #-------------------------------------------------------------------------------
 #region ANIMATION FUNCTIONS
+func PlayAnimation(_s:String):
+	#playback.travel(_s)
+	playback.call_deferred("travel", _s)
+#-------------------------------------------------------------------------------
 func AnimationTree_TimeScale(_f:float):
 	animation_tree[timeScale_path+"scale"] = _f
 #-------------------------------------------------------------------------------
@@ -113,6 +124,7 @@ func Velocity_computed(safe_velocity:Vector3):
 #-------------------------------------------------------------------------------
 func OnReset():
 	myENEMY_STATE = ENEMY_STATE.NAVIGATING
-	AnimationTree_TimeScale(0.5)
-	playback.travel(animName_Locomotion)
+	AnimationTree_TimeScale(1.0)
+	PlayAnimation(animName_Locomotion)
 #endregion
+#-------------------------------------------------------------------------------

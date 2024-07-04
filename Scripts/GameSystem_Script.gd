@@ -1,9 +1,11 @@
 extends Node
-#-------------------------------------------------------------------------------
+#region VARIABLES
 @export var player: Player_Script
 @export var playerInfo: Label
 @export var pauseLabel: Label
+#endregion
 #-------------------------------------------------------------------------------
+#region MONOVEHAVIOUR
 func _ready():
 	PauseOff()
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -15,6 +17,7 @@ func _process(_delta:float):
 	Set_MouseMode()
 	ResetGame()
 	PauseGame()
+#endregion
 #-------------------------------------------------------------------------------
 #region DEBUG INPUTS
 func Set_FullScreen() -> void:
@@ -57,3 +60,4 @@ func PauseOff():
 	pauseLabel.hide()
 	get_tree().set_deferred("paused", false)
 #endregion
+#-------------------------------------------------------------------------------
