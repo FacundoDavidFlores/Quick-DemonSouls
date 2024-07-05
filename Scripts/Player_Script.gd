@@ -4,7 +4,9 @@ class_name Player_Script
 #region VARIABLES
 #-------------------------------------------------------------------------------
 # State Machine
-var myPLAYER_STATE: PLAYER_STATE = PLAYER_STATE.IDLE
+var animName: StringName
+var animFade: StringName
+#-------------------------------------------------------------------------------
 var myCOLLISSION_STATE: COLLISSION_STATE = COLLISSION_STATE.GROUND
 var myJUMP_STATE: JUMP_STATE = JUMP_STATE.FALL
 #-------------------------------------------------------------------------------
@@ -20,7 +22,6 @@ const animName_Locomotion: String = "Locomotion"
 const animName_Jump: String = "Jump"
 const animName_Dodge: String = "Dodge"
 const animName_Attack1: String = "Attack1"
-const animName_Attack1b: String = "Attack1b"
 const animName_Floating: String = "Fall"
 const animWeight: float = 0.15
 var animVelocity: Vector2
@@ -46,11 +47,10 @@ const attackInput: String = "Input_Attack"
 const dodgeInput: String = "Input_Dodge"
 #-------------------------------------------------------------------------------
 var isDoingCombo: bool = false
-const comboSlowMotion: float = 0.9
+const comboSlowMotion: float = 0.8
 const comboFastMotion: float = 1.4
 #-------------------------------------------------------------------------------
 var canRotate:bool = false
-var attackB: bool = false
 #-------------------------------------------------------------------------------
 # Playe Variables
 const jumpVelocity: float = 14
@@ -96,82 +96,151 @@ func _physics_process(_delta:float) -> void:
 	#-------------------------------------------------------------------------------
 	CameraRotation(input_camera.x, input_camera.y, 4.5)
 	CameraFollow()
+	animName = playback.get_current_node()
+	animFade = playback.get_fading_from_node()
 	#-------------------------------------------------------------------------------
-	match(myPLAYER_STATE):
-		PLAYER_STATE.IDLE:
+	match(animName):
+		animName_Locomotion:
 			Handle_Rotation(0.2)
+			Handle_Movement(ground_Speed, ground_Weight)
+			ApplyForce()	#Si utilizo mi Collision, aplico fuerza.
 			#-------------------------------------------------------------------------------
-			if(Input.is_action_just_pressed(dodgeInput)):
+			if(Input.is_action_pressed(dodgeInput) and animFade ==""):
 				AnimationTree_TimeScale(2.5)
 				PlayAnimation(animName_Dodge)
 				Roll_Movement(run_Speed)
 				myJUMP_STATE = JUMP_STATE.FALL
-				myPLAYER_STATE = PLAYER_STATE.DODGE
 				return
 			#-------------------------------------------------------------------------------
+			if(Input.is_action_pressed(attackInput) and animFade ==""):
+				currentVelocity = velocity
+				isDoingCombo = false
+				canRotate = false
+				FootOff()
+				AnimationTree_TimeScale(comboFastMotion)
+				PlayAnimation(animName_Attack1)
+				return
+			#-------------------------------------------------------------------------------
+			if(Input.is_action_pressed(jumpInput) and animFade ==""):
+				velocity.y = jumpVelocity
+				myCOLLISSION_STATE = COLLISSION_STATE.AIR
+				myJUMP_STATE = JUMP_STATE.LIGHT_JUMP
+				PlayAnimation(animName_Jump)
+				return
+			#-------------------------------------------------------------------------------
+			var _result: Dictionary = GroundCollision(-0.5)
+			if(_result):
+				velocity.y = 0.0
+				position.y = _result["position"].y
+				move_and_slide()
+			else:
+				myCOLLISSION_STATE = COLLISSION_STATE.AIR
+				myJUMP_STATE = JUMP_STATE.FALL
+				PlayAnimation(animName_Floating)
+				return
+		#-------------------------------------------------------------------------------
+		animName_Jump:
+			Handle_Rotation(0.2)
+			#-------------------------------------------------------------------------------
+			if(Input.is_action_pressed(dodgeInput) and animFade ==""):
+				AnimationTree_TimeScale(2.5)
+				PlayAnimation(animName_Dodge)
+				Roll_Movement(run_Speed)
+				myJUMP_STATE = JUMP_STATE.FALL
+				return
+			#-------------------------------------------------------------------------------
+			match(myJUMP_STATE):
+				JUMP_STATE.LIGHT_JUMP:
+					Handle_Movement(lightJump_Speed, lightJump_Weight)
+					ApplyGravity(_delta, lightJump_GravityScale)
+					move_and_slide()
+					#-------------------------------------------------------------------------------
+					if(Input.is_action_just_released(jumpInput)):
+						myJUMP_STATE = JUMP_STATE.HEAVY_JUMP
+						return
+					#-------------------------------------------------------------------------------
+					if(velocity.y <= 0.0):
+						PlayAnimation(animName_Floating)
+						myJUMP_STATE = JUMP_STATE.FALL
+						return
+				#-------------------------------------------------------------------------------
+				JUMP_STATE.HEAVY_JUMP:
+					Handle_Movement(heavyJump_Speed, heavyJump_Weight)
+					ApplyGravity(_delta, heavyJump_GravityScale)
+					move_and_slide()
+					#-------------------------------------------------------------------------------
+					if(velocity.y <= 0.0):
+						PlayAnimation(animName_Floating)
+						myJUMP_STATE = JUMP_STATE.FALL
+						return
+				#-------------------------------------------------------------------------------
+			#-------------------------------------------------------------------------------
+		#-------------------------------------------------------------------------------
+		animName_Floating:
+			Handle_Rotation(0.2)
+			#-------------------------------------------------------------------------------
+			if(Input.is_action_pressed(dodgeInput) and animFade ==""):
+				AnimationTree_TimeScale(2.5)
+				PlayAnimation(animName_Dodge)
+				Roll_Movement(run_Speed)
+				myJUMP_STATE = JUMP_STATE.FALL
+				return
+			#-------------------------------------------------------------------------------
+			match(myJUMP_STATE):
+				JUMP_STATE.FALL:
+					Handle_Movement(fall_Speed, fall_Weight)
+					ApplyGravity(_delta, fall_GravityScale)
+					move_and_slide()
+					#-------------------------------------------------------------------------------
+					if(velocity.y < terminalVelocity):
+						velocity.y = terminalVelocity
+						myJUMP_STATE = JUMP_STATE.TERMINAL_VELOCITY
+						return
+					#-------------------------------------------------------------------------------
+					var _result: Dictionary = GroundCollision(0.0)
+					if(_result):
+						PlayAnimation(animName_Locomotion)
+						velocity.y = 0.0
+						myCOLLISSION_STATE = COLLISSION_STATE.GROUND
+						return
+				#-------------------------------------------------------------------------------
+				JUMP_STATE.TERMINAL_VELOCITY:
+					Handle_Movement(terminalVelocity_Speed, terminalVelocity_Weight)
+					move_and_slide()
+					#-------------------------------------------------------------------------------
+					if(velocity.y > terminalVelocity):
+						myJUMP_STATE = JUMP_STATE.FALL
+						return
+					#-------------------------------------------------------------------------------
+					var _result: Dictionary = GroundCollision(0.0)
+					if(_result):
+						PlayAnimation(animName_Locomotion)
+						velocity.y = 0.0
+						myCOLLISSION_STATE = COLLISSION_STATE.GROUND
+						return
+				#-------------------------------------------------------------------------------
+			#-------------------------------------------------------------------------------
+		#-------------------------------------------------------------------------------
+		animName_Dodge:
+			Handle_Movement2(currentVelocity.x, currentVelocity.z, ground_Weight/2)
+			Roll_Rotation(0.2)
 			match(myCOLLISSION_STATE):
 				COLLISSION_STATE.GROUND:
-					Handle_Movement(ground_Speed, ground_Weight)
-					move_and_slide()
 					ApplyForce()	#Si utilizo mi Collision, aplico fuerza.
 					#-------------------------------------------------------------------------------
-					if(Input.is_action_just_pressed(attackInput)):
-						currentVelocity = velocity
-						isDoingCombo = false
-						canRotate = false
-						AnimationTree_TimeScale(comboFastMotion)
-						PlayAttackAnimation()
-						myPLAYER_STATE = PLAYER_STATE.ATTACK
-						return
-					#-------------------------------------------------------------------------------
-					if(Input.is_action_just_pressed(jumpInput)):
-						velocity.y = jumpVelocity
-						PlayAnimation(animName_Jump)
-						myJUMP_STATE = JUMP_STATE.LIGHT_JUMP
-						myCOLLISSION_STATE = COLLISSION_STATE.AIR
-						return
-					#-------------------------------------------------------------------------------
-					#if(!is_on_floor()):
-						#EnterFloating()
-						#myCOLLISSION_STATE = COLLISSION_STATE.AIR
-						#return
-					#-------------------------------------------------------------------------------
-					#NOTA: Esta porcion del código es mi version del is_on_floor()
 					var _result: Dictionary = GroundCollision(-0.5)
 					if(_result):
-						#velocity.y = 0.0
+						velocity.y = 0.0
+						move_and_slide()
 						position.y = _result["position"].y
 					else:
-						EnterFloating()
+						myJUMP_STATE = JUMP_STATE.FALL
 						myCOLLISSION_STATE = COLLISSION_STATE.AIR
 						return
 				#-------------------------------------------------------------------------------
 				COLLISSION_STATE.AIR:
 					match(myJUMP_STATE):
-						JUMP_STATE.LIGHT_JUMP:
-							Handle_Movement(lightJump_Speed, lightJump_Weight)
-							ApplyGravity(_delta, lightJump_GravityScale)
-							move_and_slide()
-							#-------------------------------------------------------------------------------
-							if(Input.is_action_just_released(jumpInput)):
-								myJUMP_STATE = JUMP_STATE.HEAVY_JUMP
-								return
-							#-------------------------------------------------------------------------------
-							if(velocity.y <= 0.0):
-								EnterFloating()
-								return
-						#-------------------------------------------------------------------------------
-						JUMP_STATE.HEAVY_JUMP:
-							Handle_Movement(heavyJump_Speed, heavyJump_Weight)
-							ApplyGravity(_delta, heavyJump_GravityScale)
-							move_and_slide()
-							#-------------------------------------------------------------------------------
-							if(velocity.y <= 0.0):
-								EnterFloating()
-								return
-						#-------------------------------------------------------------------------------
 						JUMP_STATE.FALL:
-							Handle_Movement(fall_Speed, fall_Weight)
 							ApplyGravity(_delta, fall_GravityScale)
 							move_and_slide()
 							#-------------------------------------------------------------------------------
@@ -180,37 +249,30 @@ func _physics_process(_delta:float) -> void:
 								myJUMP_STATE = JUMP_STATE.TERMINAL_VELOCITY
 								return
 							#-------------------------------------------------------------------------------
-							#if(is_on_floor()):
-								#EnterGrounded()
-								#return
-							#-------------------------------------------------------------------------------
-							#NOTA: Esta porcion del código es mi version del is_on_floor()
 							var _result: Dictionary = GroundCollision(0.0)
 							if(_result):
-								EnterGrounded()
+								velocity.y = 0.0
+								myCOLLISSION_STATE = COLLISSION_STATE.GROUND
 								return
 						#-------------------------------------------------------------------------------
 						JUMP_STATE.TERMINAL_VELOCITY:
-							Handle_Movement(terminalVelocity_Speed, terminalVelocity_Weight)
 							move_and_slide()
 							#-------------------------------------------------------------------------------
 							if(velocity.y > terminalVelocity):
 								myJUMP_STATE = JUMP_STATE.FALL
 								return
 							#-------------------------------------------------------------------------------
-							#if(is_on_floor()):
-								#EnterGrounded()
-								#return
-							#-------------------------------------------------------------------------------
-							#NOTA: Esta porcion del código es mi version del is_on_floor()
 							var _result: Dictionary = GroundCollision(0.0)
 							if(_result):
-								EnterGrounded()
+								velocity.y = 0.0
+								myCOLLISSION_STATE = COLLISSION_STATE.GROUND
 								return
 						#-------------------------------------------------------------------------------
+					#-------------------------------------------------------------------------------
 				#-------------------------------------------------------------------------------
+			#-------------------------------------------------------------------------------
 		#-------------------------------------------------------------------------------
-		PLAYER_STATE.ATTACK:
+		animName_Attack1:
 			currentVelocity = lerp(currentVelocity, Vector3.ZERO, 0.1)
 			var currentRoot:Quaternion = model.transform.basis.get_rotation_quaternion()
 			var _rootMotion: Vector3 = animation_tree.get_root_motion_position()
@@ -228,15 +290,16 @@ func _physics_process(_delta:float) -> void:
 			#-------------------------------------------------------------------------------
 			match(myCOLLISSION_STATE):
 				COLLISSION_STATE.GROUND:
-					move_and_slide()
 					ApplyForce()	#Si utilizo mi Collision, aplico fuerza.
+					#-------------------------------------------------------------------------------
 					var _result: Dictionary = GroundCollision(-0.5)
 					if(_result):
-						#velocity.y = 0.0
+						velocity.y = 0.0
+						move_and_slide()
 						position.y = _result["position"].y
 					else:
-						EnterFloating2()
 						myCOLLISSION_STATE = COLLISSION_STATE.AIR
+						myJUMP_STATE = JUMP_STATE.FALL
 						return
 				#-------------------------------------------------------------------------------
 				COLLISSION_STATE.AIR:
@@ -252,7 +315,8 @@ func _physics_process(_delta:float) -> void:
 							#-------------------------------------------------------------------------------
 							var _result: Dictionary = GroundCollision(0.0)
 							if(_result):
-								EnterGround2()
+								velocity.y = 0.0
+								myCOLLISSION_STATE = COLLISSION_STATE.GROUND
 								return
 						#-------------------------------------------------------------------------------
 						JUMP_STATE.TERMINAL_VELOCITY:
@@ -264,57 +328,15 @@ func _physics_process(_delta:float) -> void:
 							#-------------------------------------------------------------------------------
 							var _result: Dictionary = GroundCollision(0.0)
 							if(_result):
-								EnterGround2()
+								velocity.y = 0.0
+								myCOLLISSION_STATE = COLLISSION_STATE.GROUND
 								return
 						#-------------------------------------------------------------------------------
+					#-------------------------------------------------------------------------------
 				#-------------------------------------------------------------------------------
+			#-------------------------------------------------------------------------------
 		#-------------------------------------------------------------------------------
-		PLAYER_STATE.DODGE:
-			Handle_Movement2(currentVelocity.x, currentVelocity.z, ground_Weight/2)
-			Roll_Rotation(0.2)
-			match(myCOLLISSION_STATE):
-				COLLISSION_STATE.GROUND:
-					move_and_slide()
-					ApplyForce()	#Si utilizo mi Collision, aplico fuerza.
-					var _result: Dictionary = GroundCollision(-0.5)
-					if(_result):
-						#velocity.y = 0.0
-						position.y = _result["position"].y
-					else:
-						EnterFloating2()
-						myCOLLISSION_STATE = COLLISSION_STATE.AIR
-						return
-				#-------------------------------------------------------------------------------
-				COLLISSION_STATE.AIR:
-					match(myJUMP_STATE):
-						JUMP_STATE.FALL:
-							ApplyGravity(_delta, fall_GravityScale)
-							move_and_slide()
-							#-------------------------------------------------------------------------------
-							if(velocity.y < terminalVelocity):
-								velocity.y = terminalVelocity
-								myJUMP_STATE = JUMP_STATE.TERMINAL_VELOCITY
-								return
-							#-------------------------------------------------------------------------------
-							var _result: Dictionary = GroundCollision(0.0)
-							if(_result):
-								EnterGround2()
-								return
-						#-------------------------------------------------------------------------------
-						JUMP_STATE.TERMINAL_VELOCITY:
-							move_and_slide()
-							#-------------------------------------------------------------------------------
-							if(velocity.y > terminalVelocity):
-								myJUMP_STATE = JUMP_STATE.FALL
-								return
-							#-------------------------------------------------------------------------------
-							var _result: Dictionary = GroundCollision(0.0)
-							if(_result):
-								EnterGround2()
-								return
-						#-------------------------------------------------------------------------------
-				#-------------------------------------------------------------------------------
-		#-------------------------------------------------------------------------------
+	#-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
 func _input(event):
 	if(event is InputEventMouseMotion):
@@ -323,34 +345,26 @@ func _input(event):
 #-------------------------------------------------------------------------------
 #region STATEMACHINE FUNCTIONS
 func PlayerInfo() -> String:
-	var _s: String = "StateMachine: "
-	_s += PLAYER_STATE.keys()[myPLAYER_STATE] + "-"
+	var _s: String = ""
+	_s += "Anim Name: "+animName+"\n"
+	#-------------------------------------------------------------------------------
+	_s += "StateMachine: "
 	_s += COLLISSION_STATE.keys()[myCOLLISSION_STATE] + "-"
 	_s += JUMP_STATE.keys()[myJUMP_STATE] + "\n"
-	_s += "velocity: "+str(velocity)+"\n"
+	#-------------------------------------------------------------------------------
+	_s += "Anim Fade: "+animFade+"\n"
+	#-------------------------------------------------------------------------------
+	_s += "Anim Velocity: "+str(animVelocity)+"\n"
+	_s += "Anim Magnitude: "+str(animVelocity.length())+"\n"
+	_s += "#------------------------------------------------------"+"\n"
+	#-------------------------------------------------------------------------------
+	_s += "Velocity: "+str(velocity)+"\n"
+	_s += "Magnitud: "+str(velocity.length())+"\n"
 	_s += "Current Velocity: "+str(currentVelocity)+"\n"
 	_s += "Movement Input: "+str(input_dir)+"\n"
-	_s += "animVelocity: "+str(animVelocity)+"\n"
-	_s += "animMagnitude: "+str(animVelocity.length())+"\n"
-	_s += "Attack B: "+str(attackB)+"\n"
 	_s += "Is Doing Combo: "+str(isDoingCombo)+"\n"
 	_s += str(Engine.get_frames_per_second())+"fps"
 	return _s
-#-------------------------------------------------------------------------------
-func EnterFloating():
-	PlayAnimation(animName_Floating)
-	EnterFloating2()
-#-------------------------------------------------------------------------------
-func EnterFloating2():
-	myJUMP_STATE = JUMP_STATE.FALL
-#-------------------------------------------------------------------------------
-func EnterGrounded():
-	EnterGround2()
-	PlayAnimation(animName_Locomotion)
-#-------------------------------------------------------------------------------
-func EnterGround2():
-	velocity.y = 0.0
-	myCOLLISSION_STATE = COLLISSION_STATE.GROUND
 #endregion
 #-------------------------------------------------------------------------------
 #region PLAYER MOVEMENT
@@ -500,14 +514,6 @@ func AnimationTree_SetBlendPosition2(_s:String, _x:float, _y:float) -> void:
 func AnimationTree_TimeScale(_f:float):
 	animation_tree[timeScale_path+"scale"] = _f
 #-------------------------------------------------------------------------------
-func PlayAttackAnimation():
-	if(attackB):
-		PlayAnimation(animName_Attack1)
-		attackB = false
-	else:
-		PlayAnimation(animName_Attack1b)
-		attackB = true
-#-------------------------------------------------------------------------------
 func PlayAnimation(_s:String):
 	#playback.travel(_s)	#No va porque es viejo
 	playback.call_deferred("travel", _s)
@@ -517,12 +523,8 @@ func PlayAnimation(_s:String):
 #-------------------------------------------------------------------------------
 func Anim_FootOn():
 	var _s: StringName = playback.get_current_node()
-	if(attackB):
-		if(_s == animName_Attack1b):
-			FootOn()
-	else:
-		if(_s == animName_Attack1):
-			FootOn()
+	if(_s == animName_Attack1):
+		FootOn()
 #-------------------------------------------------------------------------------
 func FootOn():
 	foot.monitoring = true
@@ -530,12 +532,8 @@ func FootOn():
 #-------------------------------------------------------------------------------
 func Anim_FootOff():
 	var _s: StringName = playback.get_current_node()
-	if(attackB):
-		if(_s == animName_Attack1b):
-			FootOff()
-	else:
-		if(_s == animName_Attack1):
-			FootOff()
+	if(_s == animName_Attack1):
+		FootOff()
 #-------------------------------------------------------------------------------
 func FootOff():
 	foot.monitoring = false
@@ -543,24 +541,18 @@ func FootOff():
 #-------------------------------------------------------------------------------
 func Anim_CanRotate(_b:bool):
 	var _s: StringName = playback.get_current_node()
-	if(attackB):
-		if(_s == animName_Attack1b):
-			CanRotate(_b)
-	else:
-		if(_s == animName_Attack1):
-			CanRotate(_b)
+	if(_s == animName_Attack1):
+		CanRotate(_b)
 #-------------------------------------------------------------------------------
 func CanRotate(_b:bool):
-	canRotate = _b
+	var _s: StringName = playback.get_current_node()
+	if(_s == animName_Attack1):
+		canRotate = _b
 #-------------------------------------------------------------------------------
 func Anim_SlowMotion():
 	var _s: StringName = playback.get_current_node()
-	if(attackB):
-		if(_s == animName_Attack1b):
-			SlowMotion()
-	else:
-		if(_s == animName_Attack1):
-			SlowMotion()
+	if(_s == animName_Attack1):
+		SlowMotion()
 #-------------------------------------------------------------------------------
 func SlowMotion():
 	if(!isDoingCombo):
@@ -568,12 +560,8 @@ func SlowMotion():
 #-------------------------------------------------------------------------------
 func Anim_ExitCombo() -> void:
 	var _s: StringName = playback.get_current_node()
-	if(attackB):
-		if(_s == animName_Attack1b):
-			ExitCombo()
-	else:
-		if(_s == animName_Attack1):
-			ExitCombo()
+	if(_s == animName_Attack1):
+		ExitCombo()
 #-------------------------------------------------------------------------------
 func ExitCombo():
 	if(!isDoingCombo):
@@ -592,7 +580,6 @@ func Exit_Common():
 	isDoingCombo = false
 	animVelocity = Vector2.ZERO
 	AnimationTree_TimeScale(1.0)
-	myPLAYER_STATE = PLAYER_STATE.IDLE
 	if(myCOLLISSION_STATE == COLLISSION_STATE.GROUND):
 		PlayAnimation(animName_Locomotion)
 	elif(myCOLLISSION_STATE == COLLISSION_STATE.AIR):
