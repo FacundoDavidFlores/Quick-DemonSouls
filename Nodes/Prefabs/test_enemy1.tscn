@@ -1,13 +1,30 @@
-[gd_scene load_steps=20 format=3 uid="uid://co2wcy8bkwn15"]
+[gd_scene load_steps=19 format=3 uid="uid://co2wcy8bkwn15"]
 
 [ext_resource type="Script" path="res://Scripts/Enemy_Script.gd" id="1_jk3vw"]
 [ext_resource type="PackedScene" uid="uid://bw0yv1ghpphw0" path="res://Assets/CaptainRipley/3DGodotRobot.glb" id="2_47qau"]
 
-[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_qjx7g"]
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_ogwck"]
 animation = &"Hurt"
 
-[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_mbpmy"]
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_o31o2"]
 animation = &"Hurt"
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_gi6gq"]
+xfade_time = 0.15
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_tf5mx"]
+xfade_time = 0.15
+
+[sub_resource type="AnimationNodeStateMachine" id="AnimationNodeStateMachine_ff4yo"]
+state_machine_type = 1
+allow_transition_to_self = true
+reset_ends = true
+states/Hurt/node = SubResource("AnimationNodeAnimation_o31o2")
+states/Hurt/position = Vector2(410, 56)
+"states/Hurt 2/node" = SubResource("AnimationNodeAnimation_ogwck")
+"states/Hurt 2/position" = Vector2(410, 191)
+states/Start/position = Vector2(181, 100)
+transitions = ["Hurt", "Hurt 2", SubResource("AnimationNodeStateMachineTransition_gi6gq"), "Hurt 2", "Hurt", SubResource("AnimationNodeStateMachineTransition_tf5mx")]
 
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_8j6cy"]
 animation = &"Idle"
@@ -28,40 +45,28 @@ blend_point_2/pos = 2.0
 min_space = 0.0
 max_space = 2.0
 
-[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_34p35"]
-xfade_time = 0.15
-
-[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_vr1q5"]
-xfade_time = 0.15
-
 [sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_f4mkd"]
 
-[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_xxi60"]
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_ssjbp"]
 xfade_time = 0.15
 
-[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_jwtr2"]
-xfade_time = 0.15
-
-[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_7jsym"]
-xfade_time = 0.15
-
-[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_jp15d"]
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_c4wvi"]
 xfade_time = 0.15
 
 [sub_resource type="AnimationNodeStateMachine" id="AnimationNodeStateMachine_ss1uk"]
+state_machine_type = 1
 allow_transition_to_self = true
-states/Hurt1/node = SubResource("AnimationNodeAnimation_qjx7g")
-states/Hurt1/position = Vector2(274, -43)
-states/Hurt2/node = SubResource("AnimationNodeAnimation_mbpmy")
-states/Hurt2/position = Vector2(524, -43)
+states/Hurt/node = SubResource("AnimationNodeStateMachine_ff4yo")
+states/Hurt/position = Vector2(398, -25)
 states/Locomotion/node = SubResource("AnimationNodeBlendSpace1D_blf4u")
 states/Locomotion/position = Vector2(398, 100)
-transitions = ["Locomotion", "Hurt1", SubResource("AnimationNodeStateMachineTransition_34p35"), "Hurt1", "Locomotion", SubResource("AnimationNodeStateMachineTransition_vr1q5"), "Start", "Locomotion", SubResource("AnimationNodeStateMachineTransition_f4mkd"), "Hurt2", "Locomotion", SubResource("AnimationNodeStateMachineTransition_xxi60"), "Locomotion", "Hurt2", SubResource("AnimationNodeStateMachineTransition_jwtr2"), "Hurt2", "Hurt1", SubResource("AnimationNodeStateMachineTransition_7jsym"), "Hurt1", "Hurt2", SubResource("AnimationNodeStateMachineTransition_jp15d")]
-graph_offset = Vector2(1, -82)
+transitions = ["Start", "Locomotion", SubResource("AnimationNodeStateMachineTransition_f4mkd"), "Locomotion", "Hurt", SubResource("AnimationNodeStateMachineTransition_ssjbp"), "Hurt", "Locomotion", SubResource("AnimationNodeStateMachineTransition_c4wvi")]
+graph_offset = Vector2(54, -20)
 
 [sub_resource type="AnimationNodeTimeScale" id="AnimationNodeTimeScale_lqdro"]
 
 [sub_resource type="AnimationNodeBlendTree" id="AnimationNodeBlendTree_xci6u"]
+graph_offset = Vector2(-369.162, -56.0677)
 nodes/StateMachine/node = SubResource("AnimationNodeStateMachine_ss1uk")
 nodes/StateMachine/position = Vector2(-80, 100)
 nodes/TimeScale/node = SubResource("AnimationNodeTimeScale_lqdro")
@@ -85,6 +90,35 @@ collider = NodePath("CollisionShape3D")
 
 [node name="model" parent="." instance=ExtResource("2_47qau")]
 
+[node name="GeneralSkeleton" parent="model/RobotArmature" index="0"]
+bones/0/position = Vector3(-2.03946e-16, 0.498231, 0.0172703)
+bones/0/rotation = Quaternion(1.32349e-23, -1.73472e-18, 1.11022e-16, 1)
+bones/1/rotation = Quaternion(-7.45058e-09, -1.04083e-17, 6.66134e-16, 1)
+bones/2/rotation = Quaternion(5.29396e-23, 0, 4.44089e-16, 1)
+bones/3/rotation = Quaternion(-9.31323e-10, -2.60209e-18, -2.22045e-16, 1)
+bones/4/position = Vector3(4.88942e-16, 0.087347, -0.00986359)
+bones/4/rotation = Quaternion(8.4991e-29, 2.12648e-14, -7.0702e-16, 1)
+bones/5/rotation = Quaternion(1.32349e-23, -7.10716e-15, -1.11022e-16, 1)
+bones/7/position = Vector3(0, 0.314141, 0.178145)
+bones/8/position = Vector3(-7.45467e-15, 0.0372844, 0.241835)
+bones/8/rotation = Quaternion(1.32349e-23, 7.10499e-15, -1.11022e-16, 1)
+bones/9/rotation = Quaternion(0.517951, 0.48138, 0.517951, -0.48138)
+bones/10/rotation = Quaternion(-8.9407e-08, 0.830871, -0.556465, 1.11759e-07)
+bones/11/rotation = Quaternion(0, -0.707107, 0, 0.707107)
+bones/12/rotation = Quaternion(-3.20142e-10, 0.707107, -3.20142e-10, 0.707107)
+bones/13/rotation = Quaternion(0.517951, -0.48138, -0.517951, -0.48138)
+bones/14/rotation = Quaternion(8.9407e-08, 0.830871, -0.556465, -1.11759e-07)
+bones/15/rotation = Quaternion(0, 0.707107, 0, 0.707107)
+bones/16/rotation = Quaternion(-3.20142e-10, -0.707107, 3.20142e-10, 0.707107)
+bones/17/rotation = Quaternion(-4.90942e-08, 0.113754, 0.993509, 4.47655e-06)
+bones/18/rotation = Quaternion(2.2857e-06, 0.966771, -0.255644, -5.24474e-06)
+bones/19/rotation = Quaternion(-1.20532e-07, 0.602213, -0.798336, -3.15375e-06)
+bones/20/rotation = Quaternion(-6.4311e-12, 1, -2.98023e-08, -3.85866e-12)
+bones/21/rotation = Quaternion(5.01128e-08, 0.113754, 0.993509, -4.45544e-06)
+bones/22/rotation = Quaternion(-2.27778e-06, 0.966771, -0.255644, 5.21401e-06)
+bones/23/rotation = Quaternion(1.21278e-07, 0.602213, -0.798336, 3.13654e-06)
+bones/24/rotation = Quaternion(3.85866e-12, 1, -2.98023e-08, 0)
+
 [node name="Label3D" type="Label3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
 text = "Aaaaaaaaaaaaa"
@@ -98,7 +132,7 @@ one_shot = true
 root_node = NodePath("../model")
 tree_root = SubResource("AnimationNodeBlendTree_xci6u")
 anim_player = NodePath("../model/AnimationPlayer")
-parameters/StateMachine/Locomotion/blend_position = 0.00171527
+parameters/StateMachine/Locomotion/blend_position = 1.0
 parameters/TimeScale/scale = 1.0
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]

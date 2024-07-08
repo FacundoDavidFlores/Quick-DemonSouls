@@ -16,12 +16,13 @@ var speed: float = 1.5;
 @export var pathFollow3D: PathFollow3D
 #-------------------------------------------------------------------------------
 # Player Animation
-const timeScale_path: String = "parameters/TimeScale/"
-const stateMachine_path: String = "parameters/StateMachine/"
+const stateMachine_path: StringName = "parameters/StateMachine/"
+const timeScale_path: StringName = "parameters/TimeScale/"
 var playback: AnimationNodeStateMachinePlayback
-const animName_Locomotion: String = "Locomotion"
-const animName_Hurt: String = "Hurt"
-var _hurtIndex: int = 1
+#-------------------------------------------------------------------------------
+const animName_Locomotion: StringName = "Locomotion"
+const animName_Hurt: StringName = "Hurt"
+#-------------------------------------------------------------------------------
 const animWeight: float = 0.2
 var animVelocity: Vector2
 #endregion
@@ -39,7 +40,8 @@ func _ready():
 	await NavigateFixer()
 #-------------------------------------------------------------------------------
 func _physics_process(_delta:float):
-	label3D.text = ENEMY_STATE.keys()[myENEMY_STATE]
+	var _playback: AnimationNodeStateMachinePlayback = animation_tree.get(stateMachine_path+animName_Hurt+"/playback")
+	label3D.text = ENEMY_STATE.keys()[myENEMY_STATE] +"-"+ playback.get_current_node() +"-"+ _playback.get_current_node()
 	match(myENEMY_STATE):
 		ENEMY_STATE.PATROLLING:
 			Patrolling(_delta)
@@ -54,12 +56,24 @@ func Player_Attack():
 	super.Player_Attack()
 	myENEMY_STATE = ENEMY_STATE.HURT
 	AnimationTree_TimeScale(1.5)
-	if(_hurtIndex == 1):
-		_hurtIndex = 2
-	else:
-		_hurtIndex = 1
-	PlayAnimation(animName_Hurt+str(_hurtIndex))
+	Nested_Attack()
 	timer.start(flashDuration)
+#-------------------------------------------------------------------------------
+func Nested_Attack():	#NOTA: el state_machine_type del Hurt tiene que estar en Nested
+	if(playback.get_current_node() != animName_Hurt):
+		PlayAnimation(animName_Hurt)
+	var _playback: AnimationNodeStateMachinePlayback = animation_tree.get(stateMachine_path+animName_Hurt+"/playback")
+	if(_playback.get_current_node() != animName_Hurt):
+		_playback.call_deferred("travel", animName_Hurt)
+	else:
+		_playback.call_deferred("travel", animName_Hurt+" 2")
+#-------------------------------------------------------------------------------
+func Nested_Attack2():	#NOTA: No funciona
+	var _path: StringName = animName_Hurt+"/"+animName_Hurt
+	if(playback.get_current_node() != _path):
+		PlayAnimation(_path)
+	else:
+		PlayAnimation(_path+" 2")
 #endregion
 #-------------------------------------------------------------------------------
 #region STATEMACHINE FUNCTIONS
