@@ -10827,7 +10827,7 @@ _subresources={
 },
 "great sword run (2)": {
 "save_to_file/enabled": false,
-"save_to_file/keep_custom_tracks": "",
+"save_to_file/keep_custom_tracks": false,
 "save_to_file/path": "",
 "settings/loop_mode": 1,
 "slice_1/end_frame": 0,
