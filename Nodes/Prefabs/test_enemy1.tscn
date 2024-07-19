@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3 uid="uid://co2wcy8bkwn15"]
+[gd_scene load_steps=20 format=3 uid="uid://co2wcy8bkwn15"]
 
 [ext_resource type="Script" path="res://Scripts/Enemy_Script.gd" id="1_jk3vw"]
 [ext_resource type="PackedScene" uid="uid://bw0yv1ghpphw0" path="res://Assets/CaptainRipley/3DGodotRobot.glb" id="2_47qau"]
@@ -77,6 +77,9 @@ node_connections = [&"TimeScale", 0, &"StateMachine", &"output", 0, &"TimeScale"
 radius = 0.4
 height = 1.65
 
+[sub_resource type="SphereShape3D" id="SphereShape3D_7k7j8"]
+radius = 0.12772
+
 [node name="Enemy_Script" type="CharacterBody3D" node_paths=PackedStringArray("label3D", "timer", "navigationAgent", "animation_tree", "collider")]
 collision_layer = 4
 collision_mask = 7
@@ -89,35 +92,6 @@ animation_tree = NodePath("AnimationTree")
 collider = NodePath("CollisionShape3D")
 
 [node name="model" parent="." instance=ExtResource("2_47qau")]
-
-[node name="GeneralSkeleton" parent="model/RobotArmature" index="0"]
-bones/0/position = Vector3(-2.03946e-16, 0.498231, 0.0172703)
-bones/0/rotation = Quaternion(1.32349e-23, -1.73472e-18, 1.11022e-16, 1)
-bones/1/rotation = Quaternion(-7.45058e-09, -1.04083e-17, 6.66134e-16, 1)
-bones/2/rotation = Quaternion(5.29396e-23, 0, 4.44089e-16, 1)
-bones/3/rotation = Quaternion(-9.31323e-10, -2.60209e-18, -2.22045e-16, 1)
-bones/4/position = Vector3(4.88942e-16, 0.087347, -0.00986359)
-bones/4/rotation = Quaternion(8.4991e-29, 2.12648e-14, -7.0702e-16, 1)
-bones/5/rotation = Quaternion(1.32349e-23, -7.10716e-15, -1.11022e-16, 1)
-bones/7/position = Vector3(0, 0.314141, 0.178145)
-bones/8/position = Vector3(-7.45467e-15, 0.0372844, 0.241835)
-bones/8/rotation = Quaternion(1.32349e-23, 7.10499e-15, -1.11022e-16, 1)
-bones/9/rotation = Quaternion(0.517951, 0.48138, 0.517951, -0.48138)
-bones/10/rotation = Quaternion(-8.9407e-08, 0.830871, -0.556465, 1.11759e-07)
-bones/11/rotation = Quaternion(0, -0.707107, 0, 0.707107)
-bones/12/rotation = Quaternion(-3.20142e-10, 0.707107, -3.20142e-10, 0.707107)
-bones/13/rotation = Quaternion(0.517951, -0.48138, -0.517951, -0.48138)
-bones/14/rotation = Quaternion(8.9407e-08, 0.830871, -0.556465, -1.11759e-07)
-bones/15/rotation = Quaternion(0, 0.707107, 0, 0.707107)
-bones/16/rotation = Quaternion(-3.20142e-10, -0.707107, 3.20142e-10, 0.707107)
-bones/17/rotation = Quaternion(-4.90942e-08, 0.113754, 0.993509, 4.47655e-06)
-bones/18/rotation = Quaternion(2.2857e-06, 0.966771, -0.255644, -5.24474e-06)
-bones/19/rotation = Quaternion(-1.20532e-07, 0.602213, -0.798336, -3.15375e-06)
-bones/20/rotation = Quaternion(-6.4311e-12, 1, -2.98023e-08, -3.85866e-12)
-bones/21/rotation = Quaternion(5.01128e-08, 0.113754, 0.993509, -4.45544e-06)
-bones/22/rotation = Quaternion(-2.27778e-06, 0.966771, -0.255644, 5.21401e-06)
-bones/23/rotation = Quaternion(1.21278e-07, 0.602213, -0.798336, 3.13654e-06)
-bones/24/rotation = Quaternion(3.85866e-12, 1, -2.98023e-08, 0)
 
 [node name="Label3D" type="Label3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
@@ -138,5 +112,13 @@ parameters/TimeScale/scale = 1.0
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0)
 shape = SubResource("CapsuleShape3D_bt7xy")
+
+[node name="Area3D" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.865997, 0)
+collision_layer = 8
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D"]
+shape = SubResource("SphereShape3D_7k7j8")
 
 [editable path="model"]

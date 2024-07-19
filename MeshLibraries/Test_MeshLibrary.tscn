@@ -1,0 +1,50 @@
+[gd_scene load_steps=8 format=3 uid="uid://b8iec2ewrodr5"]
+
+[ext_resource type="Material" uid="uid://cljxjycxcsu2b" path="res://Assets/kenney_prototype-textures/Prototype_material.tres" id="1_xwmx1"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_h7g2l"]
+material = ExtResource("1_xwmx1")
+size = Vector2(1, 1)
+
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_fdsyv"]
+points = PackedVector3Array(0.5, 0, 0.5, -0.5, 0, 0.5, 0.5, 0, -0.5, -0.5, 0, -0.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_jssbf"]
+material = ExtResource("1_xwmx1")
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_tjb6p"]
+
+[sub_resource type="PrismMesh" id="PrismMesh_foy0w"]
+material = ExtResource("1_xwmx1")
+left_to_right = 1.0
+
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_scuhr"]
+data = PackedVector3Array(0.5, 0.5, 0.5, 0.5, -0.5, 0.5, -0.5, -0.5, 0.5, 0.5, 0.5, -0.5, -0.5, -0.5, -0.5, 0.5, -0.5, -0.5, 0.5, 0.5, 0.5, 0.5, 0.5, -0.5, 0.5, -0.5, 0.5, 0.5, 0.5, -0.5, 0.5, -0.5, -0.5, 0.5, -0.5, 0.5, 0.5, 0.5, -0.5, 0.5, 0.5, 0.5, -0.5, -0.5, -0.5, 0.5, 0.5, 0.5, -0.5, -0.5, 0.5, -0.5, -0.5, -0.5, -0.5, -0.5, 0.5, 0.5, -0.5, 0.5, -0.5, -0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5, -0.5, -0.5, -0.5)
+
+[node name="Node3D" type="Node3D"]
+
+[node name="Plane" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_h7g2l")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Plane"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Plane/StaticBody3D"]
+shape = SubResource("ConvexPolygonShape3D_fdsyv")
+
+[node name="Box" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2)
+mesh = SubResource("BoxMesh_jssbf")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Box"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Box/StaticBody3D"]
+shape = SubResource("BoxShape3D_tjb6p")
+
+[node name="Ramp" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1.5)
+mesh = SubResource("PrismMesh_foy0w")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Ramp"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ramp/StaticBody3D"]
+shape = SubResource("ConcavePolygonShape3D_scuhr")
