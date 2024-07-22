@@ -19,6 +19,7 @@ const animName_Jump: StringName = "Jump"
 const animName_Dodge: StringName = "Dodge"
 const animName_Attack: StringName = "Attack"
 const animName_Floating: StringName = "Fall"
+const animName_Item: StringName = "Potion"
 #-------------------------------------------------------------------------------
 var attack_playback: AnimationNodeStateMachinePlayback
 const animName_Combo1: StringName = "Combo1"
@@ -52,6 +53,7 @@ var input_camera: Vector2
 const jumpInput: String = "Input_Jump"
 const runInput: String = "Input_Run"
 const attackInput: String = "Input_Attack"
+const itemInput: String = "Input_Item"
 const dodgeInput: String = "Input_Dodge"
 const lockOnInput: String = "Input_LockOn"
 #-------------------------------------------------------------------------------
@@ -123,7 +125,7 @@ func _physics_process(_delta:float) -> void:
 	match(_animName):
 		animName_Locomotion:
 			Handle_Rotation(0.15)
-			Handle_Movement(ground_Speed, ground_Weight)
+			Handle_Movement("Locomotion", ground_Speed, run_Speed, ground_Weight)
 			ApplyForce()	#Si utilizo mi Collision, aplico fuerza.
 			#-------------------------------------------------------------------------------
 			if(Input.is_action_pressed(dodgeInput) and !isInCrossFade):
@@ -147,6 +149,13 @@ func _physics_process(_delta:float) -> void:
 				myCOLLISSION_STATE = COLLISSION_STATE.AIR
 				myJUMP_STATE = JUMP_STATE.LIGHT_JUMP
 				Change_AnimationState(animName_Jump)
+				move_and_slide()
+				return
+			#-------------------------------------------------------------------------------
+			if(Input.is_action_pressed(itemInput) and !isInCrossFade):
+				animation_tree["parameters/TimeSeek 2/seek_request"] = 2
+				Change_AnimationState(animName_Item)
+				myJUMP_STATE = JUMP_STATE.FALL
 				move_and_slide()
 				return
 			#-------------------------------------------------------------------------------
@@ -181,7 +190,7 @@ func _physics_process(_delta:float) -> void:
 			#-------------------------------------------------------------------------------
 			match(myJUMP_STATE):
 				JUMP_STATE.LIGHT_JUMP:
-					Handle_Movement(lightJump_Speed, lightJump_Weight)
+					Handle_Movement("Locomotion", lightJump_Speed, run_Speed, lightJump_Weight)
 					ApplyGravity(_delta, lightJump_GravityScale)
 					move_and_slide()
 					#-------------------------------------------------------------------------------
@@ -195,7 +204,7 @@ func _physics_process(_delta:float) -> void:
 						return
 				#-------------------------------------------------------------------------------
 				JUMP_STATE.HEAVY_JUMP:
-					Handle_Movement(heavyJump_Speed, heavyJump_Weight)
+					Handle_Movement("Locomotion", heavyJump_Speed, run_Speed, heavyJump_Weight)
 					ApplyGravity(_delta, heavyJump_GravityScale)
 					move_and_slide()
 					#-------------------------------------------------------------------------------
@@ -215,7 +224,7 @@ func _physics_process(_delta:float) -> void:
 			#-------------------------------------------------------------------------------
 			match(myJUMP_STATE):
 				JUMP_STATE.FALL:
-					Handle_Movement(fall_Speed, fall_Weight)
+					Handle_Movement("Locomotion", fall_Speed, run_Speed, fall_Weight)
 					ApplyGravity(_delta, fall_GravityScale)
 					move_and_slide()
 					#-------------------------------------------------------------------------------
@@ -239,7 +248,7 @@ func _physics_process(_delta:float) -> void:
 						return
 				#-------------------------------------------------------------------------------
 				JUMP_STATE.TERMINAL_VELOCITY:
-					Handle_Movement(terminalVelocity_Speed, terminalVelocity_Weight)
+					Handle_Movement("Locomotion", terminalVelocity_Speed, run_Speed, terminalVelocity_Weight)
 					move_and_slide()
 					#-------------------------------------------------------------------------------
 					if(velocity.y > terminalVelocity):
@@ -425,6 +434,77 @@ func _physics_process(_delta:float) -> void:
 				#-------------------------------------------------------------------------------
 			#-------------------------------------------------------------------------------
 		#-------------------------------------------------------------------------------
+		animName_Item:
+			Handle_Rotation(0.15)
+			Handle_Movement("Potion_Locomotion", ground_Speed, run_Speed, ground_Weight)
+			match(myCOLLISSION_STATE):
+				COLLISSION_STATE.GROUND:
+					ApplyForce()	#Si utilizo mi Collision, aplico fuerza.
+					#-------------------------------------------------------------------------------
+					#Note: El "is_on_floor()" del propio Juego
+					#move_and_slide()
+					#if(!is_on_floor()):
+					#	myCOLLISSION_STATE = COLLISSION_STATE.AIR
+					#	myJUMP_STATE = JUMP_STATE.FALL
+					#	return
+					#-------------------------------------------------------------------------------
+					#Note: Mi version de "is_on_floor()"
+					var _result: Dictionary = GroundCollision(ground_OffSet)
+					if(_result):
+						velocity.y = 0.0
+						move_and_slide()
+						position.y = _result["position"].y
+					else:
+						myCOLLISSION_STATE = COLLISSION_STATE.AIR
+						myJUMP_STATE = JUMP_STATE.FALL
+						return
+				#-------------------------------------------------------------------------------
+				COLLISSION_STATE.AIR:
+					match(myJUMP_STATE):
+						JUMP_STATE.FALL:
+							ApplyGravity(_delta, fall_GravityScale)
+							move_and_slide()
+							#-------------------------------------------------------------------------------
+							if(velocity.y < terminalVelocity):
+								velocity.y = terminalVelocity
+								myJUMP_STATE = JUMP_STATE.TERMINAL_VELOCITY
+								return
+							#-------------------------------------------------------------------------------
+							#Note: El "is_on_floor()" del propio Juego
+							#if(is_on_floor()):
+							#	myCOLLISSION_STATE = COLLISSION_STATE.GROUND
+							#	return
+							#-------------------------------------------------------------------------------
+							#Note: Mi version de "is_on_floor()"
+							var _result: Dictionary = GroundCollision(0.0)
+							if(_result):
+								velocity.y = 0.0
+								myCOLLISSION_STATE = COLLISSION_STATE.GROUND
+								return
+						#-------------------------------------------------------------------------------
+						JUMP_STATE.TERMINAL_VELOCITY:
+							move_and_slide()
+							#-------------------------------------------------------------------------------
+							if(velocity.y > terminalVelocity):
+								myJUMP_STATE = JUMP_STATE.FALL
+								return
+							#-------------------------------------------------------------------------------
+							#Note: El "is_on_floor()" del propio Juego
+							#if(is_on_floor()):
+							#	myCOLLISSION_STATE = COLLISSION_STATE.GROUND
+							#	return
+							#-------------------------------------------------------------------------------
+							#Note: Mi version de "is_on_floor()"
+							var _result: Dictionary = GroundCollision(0.0)
+							if(_result):
+								velocity.y = 0.0
+								myCOLLISSION_STATE = COLLISSION_STATE.GROUND
+								return
+						#-------------------------------------------------------------------------------
+					#-------------------------------------------------------------------------------
+				#-------------------------------------------------------------------------------
+			#-------------------------------------------------------------------------------
+		#-------------------------------------------------------------------------------
 	#-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
 func _input(event):
@@ -472,7 +552,7 @@ func Start_Dodge():
 func ApplyGravity(_delta:float, _scale:float) -> void:
 	velocity.y -= gravity * _scale * _delta
 #-------------------------------------------------------------------------------
-func Handle_Movement(_speed:float, _weight:float):
+func Handle_Movement(_s:String, _normalSpeed:float, _runSpeed:float, _weight:float):
 	if(input_dir != Vector2.ZERO):
 		var _targetDir: Vector3
 		if(Input.is_action_pressed(runInput)):
@@ -480,19 +560,19 @@ func Handle_Movement(_speed:float, _weight:float):
 			_targetDir += cameraHolder.transform.basis.x * input_dir_raw.x
 			_targetDir.y = 0.0
 			_targetDir.normalized()
-			Handle_Movement2(_targetDir.x * run_Speed, _targetDir.z * run_Speed, _weight)
-			AnimationTree_SetLocomotion2(_targetDir.x * 2.0, _targetDir.z * 2.0)
+			Handle_Movement2(_targetDir.x * _runSpeed, _targetDir.z * _runSpeed, _weight)
+			AnimationTree_SetLocomotion2(_s, _targetDir.x * 2.0, _targetDir.z * 2.0)
 		else:
 			_targetDir = cameraHolder.transform.basis.z * input_dir.y
 			_targetDir += cameraHolder.transform.basis.x * input_dir.x
 			_targetDir.y = 0.0
 			_targetDir.normalized()
-			Handle_Movement2(_targetDir.x * _speed, _targetDir.z * _speed, _weight)
-			#AnimationTree_SetLocomotion(velocity.x, velocity.z, _speed)	#Esta linea si quiero que cuando choque con una pared, la animacion cambie.
-			AnimationTree_SetLocomotion2(_targetDir.x, _targetDir.z) 
+			Handle_Movement2(_targetDir.x * _normalSpeed, _targetDir.z * _normalSpeed, _weight)
+			#AnimationTree_SetLocomotion(velocity.x, velocity.z, _normalSpeed)	#Esta linea si quiero que cuando choque con una pared, la animacion cambie.
+			AnimationTree_SetLocomotion2(_s, _targetDir.x, _targetDir.z) 
 	else:
 		Handle_Movement2(0.0, 0.0, _weight)
-		AnimationTree_SetLocomotion2(0.0, 0.0)
+		AnimationTree_SetLocomotion2(_s, 0.0, 0.0)
 #-------------------------------------------------------------------------------
 func Handle_Movement2(_x:float, _z:float, _weight:float):
 	velocity.x = lerp(velocity.x, _x, _weight)
@@ -721,17 +801,17 @@ func LockOn_DotManager():
 #endregion
 #-------------------------------------------------------------------------------
 #region ANIMATION
-func AnimationTree_SetLocomotion(_x:float, _y:float, _velocity:float) -> void:
+func AnimationTree_SetLocomotion(_s:String, _x:float, _y:float, _velocity:float) -> void:
 	var _v2: Vector2 = Vector2(_x, _y)
 	_v2 = _v2/_velocity
-	AnimationTree_SetLocomotion2(_v2.x, _v2.y)
+	AnimationTree_SetLocomotion2(_s, _v2.x, _v2.y)
 #-------------------------------------------------------------------------------
-func AnimationTree_SetLocomotion2(_x:float, _y:float) -> void:
+func AnimationTree_SetLocomotion2(_s:String, _x:float, _y:float) -> void:
 	animVelocity = lerp(animVelocity, Vector2(_x,_y), animWeight)
-	AnimationTree_SetBlendPosition1(animName_Locomotion, animVelocity.length())
+	AnimationTree_SetBlendPosition1(_s, animVelocity.length())
 #-------------------------------------------------------------------------------
 func AnimationTree_SetBlendPosition1(_s:String, _x:float) -> void:
-	animation_tree["parameters/Locomotion/blend_position"] = _x
+	animation_tree["parameters/"+_s+"/blend_position"] = _x
 #-------------------------------------------------------------------------------
 func AnimationTree_SetBlendPosition2(_s:String, _x:float, _y:float) -> void:
 	animation_tree["parameters/Locomotion/blend_position"] = Vector2(_x, _y)
@@ -795,17 +875,25 @@ func Anim_ExitAttack() -> void:
 	var _animName: StringName = Get_AnimationState()
 	if(_animName == animName_Attack):
 		FootOff()
+		comboCounter = 0
+		animVelocity = Vector2.ZERO
+		AnimationTree_TimeScale(1.0)
 		Exit_Common()
 #-------------------------------------------------------------------------------
 func Anim_ExitDodge():
 	var _animName: StringName = Get_AnimationState()
 	if(_animName == animName_Dodge):
+		comboCounter = 0
+		animVelocity = Vector2.ZERO
+		AnimationTree_TimeScale(1.0)
+		Exit_Common()
+#-------------------------------------------------------------------------------
+func Anim_ExitItem():
+	var _animName: StringName = Get_AnimationState()
+	if(_animName == animName_Item):
 		Exit_Common()
 #-------------------------------------------------------------------------------
 func Exit_Common():
-	comboCounter = 0
-	animVelocity = Vector2.ZERO
-	AnimationTree_TimeScale(1.0)
 	if(myCOLLISSION_STATE == COLLISSION_STATE.GROUND):
 		Change_AnimationState(animName_Locomotion)
 	elif(myCOLLISSION_STATE == COLLISSION_STATE.AIR):
