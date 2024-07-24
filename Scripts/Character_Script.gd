@@ -2,7 +2,7 @@ extends CharacterBody3D
 class_name Character_Script
 #-------------------------------------------------------------------------------
 #region VARIABLES
-enum PLAYER_STATE{IDLE, ATTACK, DODGE}
+enum PLAYER_STATE{IDLE, ATTACK, DODGE, ITEM}
 enum COLLISSION_STATE{GROUND, AIR}
 enum JUMP_STATE{LIGHT_JUMP, HEAVY_JUMP, FALL, TERMINAL_VELOCITY}
 #-------------------------------------------------------------------------------

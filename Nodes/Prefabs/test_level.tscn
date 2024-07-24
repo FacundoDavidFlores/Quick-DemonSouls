@@ -54,6 +54,12 @@ use_collision = true
 size = Vector3(30.5, 0.25, 50.5)
 material = ExtResource("3_co1lq")
 
+[node name="CSGBox3D23" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25.9638, -7.97721, 8.25)
+use_collision = true
+size = Vector3(30.5, 1, 50.5)
+material = ExtResource("3_co1lq")
+
 [node name="CSGBox3D6" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.5, 3.375, 0)
 use_collision = true
@@ -112,6 +118,13 @@ material = ExtResource("3_co1lq")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0.493159, 5.5)
 use_collision = true
 polygon = PackedVector2Array(-6.5, 0, 0.5, 3, 2, 3, 2, 0)
+depth = 2.0
+material = ExtResource("3_co1lq")
+
+[node name="CSGPolygon3D5" type="CSGPolygon3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12.4045, -7.53599, 5.5)
+use_collision = true
+polygon = PackedVector2Array(-17, 0, 0, 8, 1.5, 8, 1.5, 0)
 depth = 2.0
 material = ExtResource("3_co1lq")
 
