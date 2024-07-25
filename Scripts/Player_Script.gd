@@ -10,8 +10,6 @@ var myJUMP_STATE: JUMP_STATE = JUMP_STATE.FALL
 # Player Nodes
 @export var foot: Area3D
 @export var footBox: Node3D
-@export var crossFade_Timer: Timer
-var isInCrossFade: bool
 #-------------------------------------------------------------------------------
 # Player Animation
 #-------------------------------------------------------------------------------
@@ -19,7 +17,6 @@ const baseBody: StringName = "BaseBody"
 const upperBody: StringName = "UpperBody"
 const baseBody2: StringName = "BaseBody2"
 const upperBody2: StringName = "UpperBody2"
-const oneShot_BaseBody_Combo1_TimeScale: StringName = "Combo_TimeScale"
 #-------------------------------------------------------------------------------
 const animName_Locomotion: StringName = "Locomotion"
 const animName_Jump: StringName = "Jump"
@@ -105,11 +102,10 @@ func _ready():
 	cameraZ = camera.position.z
 	#-------------------------------------------------------------------------------
 	attack_playback = animation_tree.get("parameters/Attack/playback")
-	PlayAnimation(baseBody, animName_Locomotion)
+	AnimationTree_Transition_Set(baseBody, animName_Locomotion)
 	#-------------------------------------------------------------------------------
 	foot.body_entered.connect(KickEvent)
 	#-------------------------------------------------------------------------------
-	crossFade_Timer.timeout.connect(CrossFade_Time)
 	FootOff()
 	LockOff()
 #-------------------------------------------------------------------------------
@@ -131,8 +127,6 @@ func _physics_process(_delta:float) -> void:
 	#-------------------------------------------------------------------------------
 	match(myPLAYER_STATE):
 		PLAYER_STATE.IDLE:
-			AnimationTree_Blend2_Weight(baseBody2,0, blendWeight)
-			AnimationTree_Blend2_Weight(upperBody2,0, blendWeight)
 			#-------------------------------------------------------------------------------
 			match(myCOLLISSION_STATE):
 				COLLISSION_STATE.GROUND:
@@ -140,34 +134,39 @@ func _physics_process(_delta:float) -> void:
 					Handle_Movement(ground_Speed, run_Speed, ground_Weight)
 					ApplyForce()	#Si utilizo mi Collision, aplico fuerza.
 					#-------------------------------------------------------------------------------
-					if(Input.is_action_pressed(dodgeInput) and !isInCrossFade):
+					if(Input.is_action_pressed(dodgeInput) and !AnimationTree_OneShot_Get(baseBody2)):
+					#if(Input.is_action_pressed(dodgeInput)):
 						Start_Dodge()
 						return
 					#-------------------------------------------------------------------------------
-					if(Input.is_action_pressed(attackInput) and !isInCrossFade):
+					if(Input.is_action_pressed(attackInput) and !AnimationTree_OneShot_Get(baseBody2)):
+					#if(Input.is_action_pressed(attackInput)):
 						myPLAYER_STATE = PLAYER_STATE.ATTACK
 						currentVelocity = velocity
 						comboCounter = 0
 						isInSlowMotion = false
 						canRotate = false
 						FootOff()
-						AnimationTree_TimeScale(oneShot_BaseBody_Combo1_TimeScale, comboFastMotion)
-						PlayAnimation(baseBody2, animName_Combo1)
+						AnimationTree_TimeScale(animName_Combo1, comboFastMotion)
+						AnimationTree_Transition_Set(baseBody2, animName_Combo1)
+						AnimationTree_OneShot_Set(baseBody2, true)
 						move_and_slide()
 						return
 					#-------------------------------------------------------------------------------
-					if(Input.is_action_pressed(jumpInput) and !isInCrossFade):
+					if(Input.is_action_pressed(jumpInput)):
 						velocity.y = jumpVelocity
 						myCOLLISSION_STATE = COLLISSION_STATE.AIR
 						myJUMP_STATE = JUMP_STATE.LIGHT_JUMP
-						PlayAnimation(baseBody, animName_Jump)
+						AnimationTree_Transition_Set(baseBody, animName_Jump)
 						move_and_slide()
 						return
 					#-------------------------------------------------------------------------------
-					if(Input.is_action_pressed(itemInput) and !isInCrossFade):
+					if(Input.is_action_pressed(itemInput) and !AnimationTree_OneShot_Get(upperBody2)):
+					#if(Input.is_action_pressed(itemInput)):
 						myPLAYER_STATE = PLAYER_STATE.ITEM
-						PlayAnimation_InSecond(animName_Item, 1.5)
-						#PlayAnimation(upperBody2, animName_Item)
+						AnimationTree_TimeSeek(animName_Item, 1.5)
+						AnimationTree_Transition_Set(upperBody2, animName_Item)
+						AnimationTree_OneShot_Set(upperBody2, true)
 						myJUMP_STATE = JUMP_STATE.FALL
 						move_and_slide()
 						return
@@ -189,14 +188,15 @@ func _physics_process(_delta:float) -> void:
 					else:
 						myCOLLISSION_STATE = COLLISSION_STATE.AIR
 						myJUMP_STATE = JUMP_STATE.FALL
-						PlayAnimation(baseBody, animName_Floating)
+						AnimationTree_Transition_Set(baseBody, animName_Floating)
 						move_and_slide()
 						return
 				#-------------------------------------------------------------------------------
 				COLLISSION_STATE.AIR:
 					Handle_Rotation(0.15)
 					#-------------------------------------------------------------------------------
-					if(Input.is_action_pressed(dodgeInput) and !isInCrossFade):
+					if(Input.is_action_pressed(dodgeInput) and !AnimationTree_OneShot_Get(baseBody2)):
+					#if(Input.is_action_pressed(dodgeInput)):
 						Start_Dodge()
 						return
 					#-------------------------------------------------------------------------------
@@ -211,7 +211,7 @@ func _physics_process(_delta:float) -> void:
 								return
 							#-------------------------------------------------------------------------------
 							if(velocity.y <= 0.0):
-								PlayAnimation(baseBody, animName_Floating)
+								AnimationTree_Transition_Set(baseBody, animName_Floating)
 								myJUMP_STATE = JUMP_STATE.FALL
 								return
 						#-------------------------------------------------------------------------------
@@ -221,7 +221,7 @@ func _physics_process(_delta:float) -> void:
 							move_and_slide()
 							#-------------------------------------------------------------------------------
 							if(velocity.y <= 0.0):
-								PlayAnimation(baseBody, animName_Floating)
+								AnimationTree_Transition_Set(baseBody, animName_Floating)
 								myJUMP_STATE = JUMP_STATE.FALL
 								return
 						#-------------------------------------------------------------------------------
@@ -246,7 +246,7 @@ func _physics_process(_delta:float) -> void:
 							if(_result):
 								velocity.y = 0.0
 								myCOLLISSION_STATE = COLLISSION_STATE.GROUND
-								PlayAnimation(baseBody, animName_Locomotion)
+								AnimationTree_Transition_Set(baseBody, animName_Locomotion)
 								return
 						#-------------------------------------------------------------------------------
 						JUMP_STATE.TERMINAL_VELOCITY:
@@ -268,7 +268,7 @@ func _physics_process(_delta:float) -> void:
 							if(_result):
 								velocity.y = 0.0
 								myCOLLISSION_STATE = COLLISSION_STATE.GROUND
-								PlayAnimation(baseBody, animName_Locomotion)
+								AnimationTree_Transition_Set(baseBody, animName_Locomotion)
 								return
 							#-------------------------------------------------------------------------------
 						#-------------------------------------------------------------------------------
@@ -279,8 +279,6 @@ func _physics_process(_delta:float) -> void:
 		PLAYER_STATE.DODGE:
 			Handle_Movement2(currentVelocity.x, currentVelocity.z, ground_Weight/2)
 			Roll_Rotation(0.2)
-			AnimationTree_Blend2_Weight(baseBody2,1, blendWeight)
-			AnimationTree_Blend2_Weight(upperBody2,0, blendWeight)
 			#-------------------------------------------------------------------------------
 			match(myCOLLISSION_STATE):
 				COLLISSION_STATE.GROUND:
@@ -300,7 +298,7 @@ func _physics_process(_delta:float) -> void:
 						move_and_slide()
 						position.y = _result["position"].y
 					else:
-						PlayAnimation(baseBody, animName_Floating)
+						AnimationTree_Transition_Set(baseBody, animName_Floating)
 						myCOLLISSION_STATE = COLLISSION_STATE.AIR
 						myJUMP_STATE = JUMP_STATE.FALL
 						return
@@ -325,7 +323,7 @@ func _physics_process(_delta:float) -> void:
 							var _result: Dictionary = GroundCollision(0.0)
 							if(_result):
 								velocity.y = 0.0
-								PlayAnimation(baseBody, animName_Locomotion)
+								AnimationTree_Transition_Set(baseBody, animName_Locomotion)
 								myCOLLISSION_STATE = COLLISSION_STATE.GROUND
 								return
 						#-------------------------------------------------------------------------------
@@ -345,7 +343,7 @@ func _physics_process(_delta:float) -> void:
 							var _result: Dictionary = GroundCollision(0.0)
 							if(_result):
 								velocity.y = 0.0
-								PlayAnimation(baseBody, animName_Locomotion)
+								AnimationTree_Transition_Set(baseBody, animName_Locomotion)
 								myCOLLISSION_STATE = COLLISSION_STATE.GROUND
 								return
 						#-------------------------------------------------------------------------------
@@ -358,8 +356,6 @@ func _physics_process(_delta:float) -> void:
 			var _velocity: Vector3 = currentVelocity + _rootVelocity
 			velocity.x = _velocity.x
 			velocity.z = _velocity.z
-			AnimationTree_Blend2_Weight(baseBody2,1, blendWeight)
-			AnimationTree_Blend2_Weight(upperBody2,0, blendWeight)
 			#-------------------------------------------------------------------------------
 			if(canRotate):
 				Handle_Rotation(0.15)
@@ -367,13 +363,13 @@ func _physics_process(_delta:float) -> void:
 			if(Input.is_action_just_pressed(attackInput)):
 				comboCounter += 1
 				if(isInSlowMotion):
-					AnimationTree_TimeScale(oneShot_BaseBody_Combo1_TimeScale, comboFastMotion)
+					AnimationTree_TimeScale(animName_Combo1, comboFastMotion)
 					isInSlowMotion = false
 			#-------------------------------------------------------------------------------
 			if(Input.is_action_pressed(dodgeInput)):
 				if(isInSlowMotion):
-					PlayAnimation(baseBody2, animName_Dodge)
-					AnimationTree_TimeScale(oneShot_BaseBody_Combo1_TimeScale, 1.0)
+					AnimationTree_Transition_Set(baseBody2, animName_Dodge)
+					AnimationTree_TimeScale(animName_Combo1, 1.0)
 					comboCounter = 0
 					Roll_Movement(run_Speed)
 					myPLAYER_STATE = PLAYER_STATE.DODGE
@@ -400,7 +396,7 @@ func _physics_process(_delta:float) -> void:
 					else:
 						myCOLLISSION_STATE = COLLISSION_STATE.AIR
 						myJUMP_STATE = JUMP_STATE.FALL
-						PlayAnimation(baseBody, animName_Floating)
+						AnimationTree_Transition_Set(baseBody, animName_Floating)
 						return
 				#-------------------------------------------------------------------------------
 				COLLISSION_STATE.AIR:
@@ -424,7 +420,7 @@ func _physics_process(_delta:float) -> void:
 							if(_result):
 								velocity.y = 0.0
 								myCOLLISSION_STATE = COLLISSION_STATE.GROUND
-								PlayAnimation(baseBody, animName_Locomotion)
+								AnimationTree_Transition_Set(baseBody, animName_Locomotion)
 								return
 						#-------------------------------------------------------------------------------
 						JUMP_STATE.TERMINAL_VELOCITY:
@@ -444,7 +440,7 @@ func _physics_process(_delta:float) -> void:
 							if(_result):
 								velocity.y = 0.0
 								myCOLLISSION_STATE = COLLISSION_STATE.GROUND
-								PlayAnimation(baseBody, animName_Locomotion)
+								AnimationTree_Transition_Set(baseBody, animName_Locomotion)
 								return
 						#-------------------------------------------------------------------------------
 					#-------------------------------------------------------------------------------
@@ -454,8 +450,6 @@ func _physics_process(_delta:float) -> void:
 		PLAYER_STATE.ITEM:
 			Handle_Rotation(0.15)
 			Handle_Movement(ground_Speed, run_Speed, ground_Weight)
-			AnimationTree_Blend2_Weight(baseBody2,0, blendWeight)
-			AnimationTree_Blend2_Weight(upperBody2,1, blendWeight)
 			#-------------------------------------------------------------------------------
 			match(myCOLLISSION_STATE):
 				COLLISSION_STATE.GROUND:
@@ -475,7 +469,7 @@ func _physics_process(_delta:float) -> void:
 						move_and_slide()
 						position.y = _result["position"].y
 					else:
-						PlayAnimation(baseBody, animName_Floating)
+						AnimationTree_Transition_Set(baseBody, animName_Floating)
 						myCOLLISSION_STATE = COLLISSION_STATE.AIR
 						myJUMP_STATE = JUMP_STATE.FALL
 						return
@@ -500,7 +494,7 @@ func _physics_process(_delta:float) -> void:
 							var _result: Dictionary = GroundCollision(0.0)
 							if(_result):
 								velocity.y = 0.0
-								PlayAnimation(baseBody, animName_Locomotion)
+								AnimationTree_Transition_Set(baseBody, animName_Locomotion)
 								myCOLLISSION_STATE = COLLISSION_STATE.GROUND
 								return
 						#-------------------------------------------------------------------------------
@@ -520,7 +514,7 @@ func _physics_process(_delta:float) -> void:
 							var _result: Dictionary = GroundCollision(0.0)
 							if(_result):
 								velocity.y = 0.0
-								PlayAnimation(baseBody, animName_Locomotion)
+								AnimationTree_Transition_Set(baseBody, animName_Locomotion)
 								myCOLLISSION_STATE = COLLISSION_STATE.GROUND
 								return
 						#-------------------------------------------------------------------------------
@@ -542,14 +536,13 @@ func PlayerInfo() -> String:
 	_s += "Collision State: "+COLLISSION_STATE.keys()[myCOLLISSION_STATE] + "\n"
 	_s += "Jump State: "+JUMP_STATE.keys()[myJUMP_STATE] + "\n"
 	_s += "#------------------------------------------------------"+"\n"
-	_s += baseBody+"_State: "+str(AnimationTree_Transition_Get(baseBody))+"\n"
-	_s += upperBody+"_State: "+str(AnimationTree_Transition_Get(upperBody))+"\n"
-	_s += baseBody2+"_State: "+str(AnimationTree_Transition_Get(baseBody2))+"\n"
-	_s += baseBody2+"_Blend2: "+str(AnimationTree_Blend2_Get(baseBody2))+"\n"
-	_s += upperBody2+"_State: "+str(AnimationTree_Transition_Get(upperBody2))+"\n"
-	_s += upperBody2+"_Blend2: "+str(AnimationTree_Blend2_Get(upperBody2))+"\n"
+	_s += baseBody+": "+str(AnimationTree_Transition_Get(baseBody))+"\n"
+	_s += upperBody+": "+str(AnimationTree_Transition_Get(upperBody))+"\n"
+	_s += baseBody2+": "+str(AnimationTree_Transition_Get(baseBody2))+" ("
+	_s += str(AnimationTree_OneShot_Get(baseBody2))+")\n"
+	_s += upperBody2+": "+str(AnimationTree_Transition_Get(upperBody2))+" ("
+	_s += str(AnimationTree_OneShot_Get(upperBody2))+")\n"
 	_s += "#------------------------------------------------------"+"\n"
-	_s += "Is In CrossFade: "+str(isInCrossFade)+"\n"
 	_s += "Anim Velocity: "+str(animVelocity)+"\n"
 	_s += "Anim Magnitude: "+str(animVelocity.length())+"\n"
 	_s += "#------------------------------------------------------"+"\n"
@@ -568,7 +561,8 @@ func PlayerInfo() -> String:
 #-------------------------------------------------------------------------------
 func Start_Dodge():
 	myPLAYER_STATE = PLAYER_STATE.DODGE
-	PlayAnimation(baseBody2, animName_Dodge)
+	AnimationTree_Transition_Set(baseBody2, animName_Dodge)
+	AnimationTree_OneShot_Set(baseBody2, true)
 	myJUMP_STATE = JUMP_STATE.FALL
 	Roll_Movement(run_Speed)
 	move_and_slide()
@@ -835,32 +829,34 @@ func AnimationTree_SetLocomotion(_x:float, _y:float, _velocity:float) -> void:
 func AnimationTree_SetLocomotion2(_x:float, _y:float) -> void:
 	animVelocity = lerp(animVelocity, Vector2(_x,_y), animWeight)
 	AnimationTree_BlendSpace1D_Set("Locomotion", animVelocity.length())
-#-------------------------------------------------------------------------------
-func PlayAnimation(_s:String, _anim:StringName):
-	CrossFade_Start()
-	AnimationTree_Transition_Set(_s, _anim)
-#-------------------------------------------------------------------------------
-func PlayAnimation_InSecond(_anim:StringName, _f:float):
-	CrossFade_Start()
-	AnimationTree_TimeSeek(_anim, _f)
 #endregion
 #-------------------------------------------------------------------------------
 #region NEW ANIMATION FUNCTIONS
 func AnimationTree_BlendSpace1D_Set(_s:StringName, _f:float) -> void:
-	animation_tree["parameters/"+_s+"/blend_position"] = _f
+	animation_tree["parameters/"+_s+"_BlendSpace1D/blend_position"] = _f
 #-------------------------------------------------------------------------------
 func AnimationTree_BlendSpace1D_Get(_s:StringName) -> float:
-	return animation_tree["parameters/"+_s+"/blend_position"]
+	return animation_tree["parameters/"+_s+"_BlendSpace1D/blend_position"]
 #-------------------------------------------------------------------------------
 func AnimationTree_Blend2_Set(_s:StringName, _f:float) -> void:
-	animation_tree["parameters/"+_s+"/blend_amount"] = _f
+	animation_tree["parameters/"+_s+"_Blend2/blend_amount"] = _f
 #-------------------------------------------------------------------------------
 func AnimationTree_Blend2_Get(_s:StringName) -> float:
-	return animation_tree["parameters/"+_s+"/blend_amount"]
+	return animation_tree["parameters/"+_s+"_Blend2/blend_amount"]
 #-------------------------------------------------------------------------------
 func AnimationTree_Blend2_Weight(_s:StringName, _f:float, _weight:float) -> void:
 	var _value: float = AnimationTree_Blend2_Get(_s)
 	AnimationTree_Blend2_Set(_s, lerp(_value, _f, _weight))
+#-------------------------------------------------------------------------------
+func AnimationTree_OneShot_Set(_s:StringName, _b:bool) -> void:
+	var _path: String = "parameters/"+_s+"_OneShot/request"
+	if(_b):
+		animation_tree[_path] = AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE
+	else:
+		animation_tree[_path] = AnimationNodeOneShot.ONE_SHOT_REQUEST_FADE_OUT
+#-------------------------------------------------------------------------------
+func AnimationTree_OneShot_Get(_s:StringName) -> bool:
+	return animation_tree["parameters/"+_s+"_OneShot/active"]
 #-------------------------------------------------------------------------------
 func AnimationTree_Transition_Set(_s:String, _anim:StringName) -> void:
 	animation_tree["parameters/"+_s+"_Transition/transition_request"] = _anim
@@ -869,10 +865,10 @@ func AnimationTree_Transition_Get(_s:StringName) -> StringName:
 	return animation_tree["parameters/"+_s+"_Transition/current_state"]
 #-------------------------------------------------------------------------------
 func AnimationTree_TimeSeek(_s:StringName, _f:float) -> void:
-	animation_tree["parameters/"+_s+"/seek_request"] = _f
+	animation_tree["parameters/"+_s+"_TimeSeek/seek_request"] = _f
 #-------------------------------------------------------------------------------
 func AnimationTree_TimeScale(_s:StringName, _f:float) -> void:
-	animation_tree["parameters/"+_s+"/scale"] = _f
+	animation_tree["parameters/"+_s+"_TimeScale/scale"] = _f
 #endregion
 #-------------------------------------------------------------------------------
 #region ANIMATION EVENTS
@@ -897,41 +893,40 @@ func Anim_CanRotate(_b:bool):
 func Anim_SlowMotion(_max:int):
 	if(myPLAYER_STATE == PLAYER_STATE.ATTACK and comboCounter < _max):
 		isInSlowMotion = true
-		AnimationTree_TimeScale(oneShot_BaseBody_Combo1_TimeScale, comboSlowMotion)
+		AnimationTree_TimeScale(animName_Combo1, comboSlowMotion)
 #-------------------------------------------------------------------------------
 func Anim_FastMotion():
 	if(myPLAYER_STATE == PLAYER_STATE.ATTACK):
 		isInSlowMotion = false
-		AnimationTree_TimeScale(oneShot_BaseBody_Combo1_TimeScale, comboFastMotion)
+		AnimationTree_TimeScale(animName_Combo1, comboFastMotion)
 #-------------------------------------------------------------------------------
 func Anim_ExitCombo(_max:int) -> void:
 	if(myPLAYER_STATE == PLAYER_STATE.ATTACK and comboCounter < _max):
 		FootOff()
-		AnimationTree_TimeScale(oneShot_BaseBody_Combo1_TimeScale, 1.0)
+		AnimationTree_TimeScale(animName_Combo1, 1.0)
+		AnimationTree_OneShot_Set(baseBody2, false)
 		myPLAYER_STATE = PLAYER_STATE.IDLE
-		CrossFade_Start()
 #-------------------------------------------------------------------------------
 func Anim_ExitAttack() -> void:
 	if(myPLAYER_STATE == PLAYER_STATE.ATTACK):
 		FootOff()
 		comboCounter = 0
 		animVelocity = Vector2.ZERO
-		AnimationTree_TimeScale(oneShot_BaseBody_Combo1_TimeScale, 1.0)
+		AnimationTree_TimeScale(animName_Combo1, 1.0)
+		AnimationTree_OneShot_Set(baseBody2, false)
 		myPLAYER_STATE = PLAYER_STATE.IDLE
-		CrossFade_Start()
 #-------------------------------------------------------------------------------
 func Anim_ExitDodge():
 	if(myPLAYER_STATE == PLAYER_STATE.DODGE):
 		comboCounter = 0
 		animVelocity = Vector2.ZERO
-		AnimationTree_TimeScale(oneShot_BaseBody_Combo1_TimeScale, 1.0)
+		AnimationTree_OneShot_Set(baseBody2, false)
 		myPLAYER_STATE = PLAYER_STATE.IDLE
-		CrossFade_Start()
 #-------------------------------------------------------------------------------
 func Anim_ExitItem():
 	if(myPLAYER_STATE == PLAYER_STATE.ITEM):
+		AnimationTree_OneShot_Set(upperBody2, false)
 		myPLAYER_STATE = PLAYER_STATE.IDLE
-		CrossFade_Start()
 #endregion
 #-------------------------------------------------------------------------------
 #region READY FUNCIONS
@@ -975,12 +970,5 @@ func final_cleanup(mesh_instance: MeshInstance3D, persist_ms: float):
 		mesh_instance.queue_free()
 	else:
 		return mesh_instance
-#-------------------------------------------------------------------------------
-func CrossFade_Start():
-	isInCrossFade = true
-	crossFade_Timer.start(0.2)
-#-------------------------------------------------------------------------------
-func CrossFade_Time():
-	isInCrossFade = false
 #endregion
 #-------------------------------------------------------------------------------
