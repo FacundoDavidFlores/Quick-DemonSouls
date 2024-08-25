@@ -7,8 +7,10 @@ enum JUMP_STATE{LIGHT_JUMP, HEAVY_JUMP, FALL, TERMINAL_VELOCITY}
 #-------------------------------------------------------------------------------
 @onready var model: Node3D = $"model"
 #@export var model: Node3D
+@export var gameSystem: GameSystem_Script
 @export var animation_tree: AnimationTree
 @export var collider: CollisionShape3D
+const framesInOneSecond: float = 60
 const animName_Copy: StringName = "_copy"
 #endregion
 #-------------------------------------------------------------------------------

@@ -32,7 +32,7 @@ const animName_Combo3: StringName = "Combo3"
 #-------------------------------------------------------------------------------
 const animWeight: float = 0.1
 const blendWeight: float = 0.1
-const framesInOneSecond: float = 60
+
 var animVelocity: Vector2
 var currentVelocity: Vector3
 #-------------------------------------------------------------------------------
@@ -126,12 +126,13 @@ func _physics_process(_delta:float) -> void:
 	var _rootMotion: Vector3 = animation_tree.get_root_motion_position()
 	#NOTA: No se porque _delta no sirve con _rootMotion abajo, pero esto arregla si utilizo root motion para movermi personaje.
 	var _rootVelocity: Vector3 = _currentRoot.normalized() * _rootMotion/get_process_delta_time()
+	var _blendWeight: float = blendWeight * framesInOneSecond * _delta
 	#-------------------------------------------------------------------------------
 	match(myPLAYER_STATE):
 		PLAYER_STATE.IDLE:
 			#-------------------------------------------------------------------------------
-			AnimationTree_Blend2_Weight(animName_BaseBody2, 0.0, blendWeight)
-			AnimationTree_Blend2_Weight(animName_UpperBody2, 0.0, blendWeight)
+			AnimationTree_Blend2_Weight(animName_BaseBody2, 0.0, _blendWeight)
+			AnimationTree_Blend2_Weight(animName_UpperBody2, 0.0, _blendWeight)
 			#-------------------------------------------------------------------------------
 			match(myCOLLISSION_STATE):
 				COLLISSION_STATE.GROUND:
@@ -248,8 +249,8 @@ func _physics_process(_delta:float) -> void:
 			Handle_Movement2(_delta, currentVelocity.x, currentVelocity.z, ground_Weight/2)
 			Roll_Rotation(_delta, 0.2)
 			#-------------------------------------------------------------------------------
-			AnimationTree_Blend2_Weight(animName_BaseBody2, 1.0, blendWeight)
-			AnimationTree_Blend2_Weight(animName_UpperBody2, 0.0, blendWeight)
+			AnimationTree_Blend2_Weight(animName_BaseBody2, 1.0, _blendWeight)
+			AnimationTree_Blend2_Weight(animName_UpperBody2, 0.0, _blendWeight)
 			#-------------------------------------------------------------------------------
 			match(myCOLLISSION_STATE):
 				COLLISSION_STATE.GROUND:
@@ -297,8 +298,8 @@ func _physics_process(_delta:float) -> void:
 			ApplyRootMotion(_delta, _rootVelocity)
 			Handle_Combos()
 			#-------------------------------------------------------------------------------
-			AnimationTree_Blend2_Weight(animName_BaseBody2, 1.0, blendWeight)
-			AnimationTree_Blend2_Weight(animName_UpperBody2, 0.0, blendWeight)
+			AnimationTree_Blend2_Weight(animName_BaseBody2, 1.0, _blendWeight)
+			AnimationTree_Blend2_Weight(animName_UpperBody2, 0.0, _blendWeight)
 			#-------------------------------------------------------------------------------
 			if(Input.is_action_pressed(dodgeInput)):
 				if(isInSlowMotion):
@@ -351,8 +352,8 @@ func _physics_process(_delta:float) -> void:
 			Handle_Rotation(_delta, 0.15)
 			Handle_Movement(_delta, ground_Speed, run_Speed, ground_Weight)
 			#-------------------------------------------------------------------------------
-			AnimationTree_Blend2_Weight(animName_BaseBody2, 0.0, blendWeight)
-			AnimationTree_Blend2_Weight(animName_UpperBody2, 1.0, blendWeight)
+			AnimationTree_Blend2_Weight(animName_BaseBody2, 0.0, _blendWeight)
+			AnimationTree_Blend2_Weight(animName_UpperBody2, 1.0, _blendWeight)
 			#-------------------------------------------------------------------------------
 			match(myCOLLISSION_STATE):
 				COLLISSION_STATE.GROUND:
@@ -400,7 +401,7 @@ func _physics_process(_delta:float) -> void:
 #-------------------------------------------------------------------------------
 func _input(event):
 	if(event is InputEventMouseMotion and !isLockOn):
-		CameraRotation(event.relative.x, event.relative.y, 0.3)
+		CameraRotation(get_process_delta_time(), event.relative.x, event.relative.y, 0.3)
 #endregion
 #-------------------------------------------------------------------------------
 #region STATEMACHINE FUNCTIONS
@@ -446,6 +447,7 @@ func Start_DODGE_Common():
 	myPLAYER_STATE = PLAYER_STATE.DODGE
 	myJUMP_STATE = JUMP_STATE.FALL
 	PlayAnimation_WithCopy(animName_BaseBody2,animName_Dodge)
+	#PlayAnimation_InSecond_WithCopy(animName_BaseBody2,animName_Dodge, 0.2)
 #-------------------------------------------------------------------------------
 func Start_Attack():
 	myPLAYER_STATE = PLAYER_STATE.ATTACK
@@ -645,7 +647,7 @@ func Ground_Raycast_Dictionary(_x:float, _down:float, _z:float) -> Dictionary:
 	_query.collision_mask = groundColliderLayer
 	#-------------------------------------------------------------------------------
 	var _hitDictionary: Dictionary = get_world_3d().direct_space_state.intersect_ray(_query)
-	Ground_Raycast_Drawline(_hitDictionary, _from, _to)		#NOTA: Si no necesito el debug line, puedo borrar esta linea.
+	#Ground_Raycast_Drawline(_hitDictionary, _from, _to)		#NOTA: Si no necesito el debug line, puedo borrar esta linea.
 	return _hitDictionary
 #-------------------------------------------------------------------------------
 func Ground_Raycast_Drawline(_d:Dictionary, _from:Vector3, _to:Vector3):
@@ -704,7 +706,7 @@ func Camera_StateMachine(_delta:float, _x:float, _y:float, _scale:float):
 					LockOn_DotManager()
 					lockOn_Texture.show()
 					return
-			CameraRotation(_x, _y, _scale)
+			CameraRotation(_delta, _x, _y, _scale)
 		#-------------------------------------------------------------------------------
 	#-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
@@ -716,9 +718,10 @@ func CameraFollow(_delta:float):
 	var _f:float = cameraWeight * framesInOneSecond * _delta
 	cameraHolder.position = lerp(cameraHolder.position, position, _f)
 #-------------------------------------------------------------------------------
-func CameraRotation(_x:float, _y:float, _scale:float):
-	cameraHolder.rotate_y(deg_to_rad(-_x*_scale))
-	cameraPivot.rotate_x(deg_to_rad(-_y*_scale))
+func CameraRotation(_delta:float, _x:float, _y:float, _scale:float):
+	var _newScale: float = _scale*framesInOneSecond*_delta
+	cameraHolder.rotate_y(deg_to_rad(-_x*_newScale))
+	cameraPivot.rotate_x(deg_to_rad(-_y*_newScale))
 	cameraPivot.rotation.x = clamp(cameraPivot.rotation.x, deg_to_rad(cameraAngleMin), deg_to_rad(cameraAngleMax))
 #-------------------------------------------------------------------------------
 func CameraLockOn(_delta:float):

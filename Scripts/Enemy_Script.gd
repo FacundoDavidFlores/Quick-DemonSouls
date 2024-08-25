@@ -45,7 +45,7 @@ func _physics_process(_delta:float):
 		ENEMY_STATE.PATROLLING:
 			Patrolling(_delta)
 		ENEMY_STATE.NAVIGATING:
-			Navigate()
+			Navigate(_delta)
 		ENEMY_STATE.HURT:
 			pass
 #endregion
@@ -70,7 +70,7 @@ func NavigateFixer():
 	await get_tree().process_frame
 	set_physics_process(true)
 #-------------------------------------------------------------------------------
-func Navigate():
+func Navigate(_delta:float):
 	if(!navigationAgent.target_position):
 		return
 	navigationAgent.target_position = targetPosition[targetPositionIndex].global_position;
@@ -86,19 +86,21 @@ func Navigate():
 		if(targetPositionIndex >= targetPosition.size()):
 			targetPositionIndex = 0
 		navigationAgent.target_position = targetPosition[targetPositionIndex].global_position;
-	Handle_Rotation(0.1);
-	AnimationTree_SetLocomotion(speed*2)
+	Handle_Rotation(_delta, 0.1);
+	AnimationTree_SetLocomotion(_delta, speed*2)
 #-------------------------------------------------------------------------------
-func Handle_Rotation(_weight:float):
+func Handle_Rotation(_delta:float, _weight:float):
 	if(velocity != Vector3.ZERO):
-		model.global_rotation.y = lerp_angle(model.global_rotation.y, atan2(velocity.x, velocity.z), _weight)
+		var _f: float = _weight * framesInOneSecond * _delta
+		model.global_rotation.y = lerp_angle(model.global_rotation.y, atan2(velocity.x, velocity.z), _f)
 #endregion
 #-------------------------------------------------------------------------------
 #region ANIMATION FUNCTIONS
-func AnimationTree_SetLocomotion(_velocity:float) -> void:
+func AnimationTree_SetLocomotion(_delta:float, _velocity:float) -> void:
 	var _v2: Vector2 = Vector2(velocity.x, velocity.z)
 	_v2 = _v2/_velocity
-	animVelocity = lerp(animVelocity, _v2, animWeight)
+	var _f: float = animWeight * framesInOneSecond * _delta
+	animVelocity = lerp(animVelocity, _v2, _f)
 	AnimationTree_SetBlendPosition1(animName_Locomotion, animVelocity.length())
 #-------------------------------------------------------------------------------
 func AnimationTree_SetBlendPosition1(_s:String, _x:float) -> void:
