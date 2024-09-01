@@ -24,6 +24,7 @@ const animName_Dodge: StringName = "Dodge"
 const animName_Attack: StringName = "Attack"
 const animName_Floating: StringName = "Fall"
 const animName_Item: StringName = "Potion"
+const animName_Blocking: StringName = "Blocking"
 #-------------------------------------------------------------------------------
 var attack_playback: AnimationNodeStateMachinePlayback
 const animName_Combo1: StringName = "Combo1"
@@ -35,6 +36,7 @@ const blendWeight: float = 0.1
 
 var animVelocity: Vector2
 var currentVelocity: Vector3
+var currentAngle: float
 #-------------------------------------------------------------------------------
 # Camera Nodes
 @export var cameraHolder: Marker3D
@@ -64,6 +66,7 @@ const attackInput: String = "Input_Attack"
 const itemInput: String = "Input_Item"
 const dodgeInput: String = "Input_Dodge"
 const lockOnInput: String = "Input_LockOn"
+const blockInput: String = "Input_Block"
 #-------------------------------------------------------------------------------
 var comboCounter: int = 0
 var isInSlowMotion: bool = false
@@ -93,11 +96,15 @@ const heavyJump_Weight : float = 0.1
 const fall_Weight : float = 0.1
 const terminalVelocity_Weight : float = 0.1
 #-------------------------------------------------------------------------------
+const rotation_Speed : float = 0.15
+#-------------------------------------------------------------------------------
 # Gravity
 var gravity = ProjectSettings.get_setting("physics/3d/default_gravity")
 const lightJump_GravityScale : float = 3.0
 const heavyJump_GravityScale : float = 6.0
 const fall_GravityScale : float = 4.5
+#-------------------------------------------------------------------------------
+var blockingTimer: float = 0
 #endregion
 #-------------------------------------------------------------------------------
 #region MONOVEHAVIOUR
@@ -116,6 +123,8 @@ func _process(_delta:float) -> void:
 	CameraCollision()
 #-------------------------------------------------------------------------------
 func _physics_process(_delta:float) -> void:
+	super._physics_process(_delta)
+	#-------------------------------------------------------------------------------
 	input_dir = Input.get_vector("Move_Left", "Move_Right", "Move_Up", "Move_Down")
 	input_camera = Input.get_vector("Camera_Left", "Camera_Right", "Camera_Up", "Camera_Down")
 	input_dir_raw = input_dir.normalized()
@@ -126,7 +135,7 @@ func _physics_process(_delta:float) -> void:
 	var _rootMotion: Vector3 = animation_tree.get_root_motion_position()
 	#NOTA: No se porque _delta no sirve con _rootMotion abajo, pero esto arregla si utilizo root motion para movermi personaje.
 	var _rootVelocity: Vector3 = _currentRoot.normalized() * _rootMotion/get_process_delta_time()
-	var _blendWeight: float = blendWeight * framesInOneSecond * _delta
+	var _blendWeight: float = blendWeight * deltaTimeScale
 	#-------------------------------------------------------------------------------
 	match(myPLAYER_STATE):
 		PLAYER_STATE.IDLE:
@@ -136,8 +145,8 @@ func _physics_process(_delta:float) -> void:
 			#-------------------------------------------------------------------------------
 			match(myCOLLISSION_STATE):
 				COLLISSION_STATE.GROUND:
-					Handle_Rotation(_delta, 0.15)
-					Handle_Movement(_delta, ground_Speed, run_Speed, ground_Weight)
+					Handle_Input_Rotation(_delta, rotation_Speed)
+					Handle_Input_Movement(_delta, ground_Speed, run_Speed, ground_Weight)
 					ApplyForce()
 					#-------------------------------------------------------------------------------
 					if(Input.is_action_pressed(dodgeInput)):
@@ -156,6 +165,11 @@ func _physics_process(_delta:float) -> void:
 						Start_Item()
 						return
 					#-------------------------------------------------------------------------------
+					if(Input.is_action_pressed(blockInput)):
+						AnimationTree_Transition_Set(animName_BaseBody2, animName_Blocking)
+						myPLAYER_STATE = PLAYER_STATE.BLOCKING
+						return
+					#-------------------------------------------------------------------------------
 					#Note: El "is_on_floor()" del propio Juego
 					#if(is_on_floor()):
 					#	move_and_slide()
@@ -172,7 +186,7 @@ func _physics_process(_delta:float) -> void:
 						return
 				#-------------------------------------------------------------------------------
 				COLLISSION_STATE.AIR:
-					Handle_Rotation(_delta, 0.15)
+					Handle_Input_Rotation(_delta, rotation_Speed)
 					#-------------------------------------------------------------------------------
 					if(Input.is_action_pressed(dodgeInput)):
 						Start_from_IDLE_to_DODGE()
@@ -180,7 +194,7 @@ func _physics_process(_delta:float) -> void:
 					#-------------------------------------------------------------------------------
 					match(myJUMP_STATE):
 						JUMP_STATE.LIGHT_JUMP:
-							Handle_Movement(_delta, lightJump_Speed, run_Speed, lightJump_Weight)
+							Handle_Input_Movement(_delta, lightJump_Speed, run_Speed, lightJump_Weight)
 							ApplyGravity(_delta, lightJump_GravityScale)
 							move_and_slide()
 							#-------------------------------------------------------------------------------
@@ -193,7 +207,7 @@ func _physics_process(_delta:float) -> void:
 								return
 						#-------------------------------------------------------------------------------
 						JUMP_STATE.HEAVY_JUMP:
-							Handle_Movement(_delta, heavyJump_Speed, run_Speed, heavyJump_Weight)
+							Handle_Input_Movement(_delta, heavyJump_Speed, run_Speed, heavyJump_Weight)
 							ApplyGravity(_delta, heavyJump_GravityScale)
 							move_and_slide()
 							#-------------------------------------------------------------------------------
@@ -202,7 +216,7 @@ func _physics_process(_delta:float) -> void:
 								return
 						#-------------------------------------------------------------------------------
 						JUMP_STATE.FALL:
-							Handle_Movement(_delta, fall_Speed, run_Speed, fall_Weight)
+							Handle_Input_Movement(_delta, fall_Speed, run_Speed, fall_Weight)
 							ApplyGravity(_delta, fall_GravityScale)
 							move_and_slide()
 							#-------------------------------------------------------------------------------
@@ -222,7 +236,7 @@ func _physics_process(_delta:float) -> void:
 								return
 						#-------------------------------------------------------------------------------
 						JUMP_STATE.TERMINAL_VELOCITY:
-							Handle_Movement(_delta, terminalVelocity_Speed, run_Speed, terminalVelocity_Weight)
+							Handle_Input_Movement(_delta, terminalVelocity_Speed, run_Speed, terminalVelocity_Weight)
 							move_and_slide()
 							#-------------------------------------------------------------------------------
 							if(velocity.y > terminalVelocity):
@@ -246,8 +260,8 @@ func _physics_process(_delta:float) -> void:
 			#-------------------------------------------------------------------------------
 		#-------------------------------------------------------------------------------
 		PLAYER_STATE.DODGE:
-			Handle_Movement2(_delta, currentVelocity.x, currentVelocity.z, ground_Weight/2)
-			Roll_Rotation(_delta, 0.2)
+			Handle_Movement(_delta, currentVelocity.x, currentVelocity.z, ground_Weight/2)
+			Handle_Rotation(_delta, rotation_Speed)
 			#-------------------------------------------------------------------------------
 			AnimationTree_Blend2_Weight(animName_BaseBody2, 1.0, _blendWeight)
 			AnimationTree_Blend2_Weight(animName_UpperBody2, 0.0, _blendWeight)
@@ -349,8 +363,8 @@ func _physics_process(_delta:float) -> void:
 			#-------------------------------------------------------------------------------
 		#-------------------------------------------------------------------------------
 		PLAYER_STATE.ITEM:
-			Handle_Rotation(_delta, 0.15)
-			Handle_Movement(_delta, ground_Speed, run_Speed, ground_Weight)
+			Handle_Input_Rotation(_delta, rotation_Speed)
+			Handle_Input_Movement(_delta, ground_Speed, run_Speed, ground_Weight)
 			#-------------------------------------------------------------------------------
 			AnimationTree_Blend2_Weight(animName_BaseBody2, 0.0, _blendWeight)
 			AnimationTree_Blend2_Weight(animName_UpperBody2, 1.0, _blendWeight)
@@ -396,6 +410,14 @@ func _physics_process(_delta:float) -> void:
 					#-------------------------------------------------------------------------------
 				#-------------------------------------------------------------------------------
 			#-------------------------------------------------------------------------------
+		#-------------------------------------------------------------------------------
+		PLAYER_STATE.BLOCKING:
+			AnimationTree_Blend2_Weight(animName_BaseBody2, 1.0, _blendWeight*2)
+			AnimationTree_Blend2_Weight(animName_UpperBody2, 0.0, _blendWeight)
+			Handle_Rotation(_delta, rotation_Speed)
+			if(!Input.is_action_pressed(blockInput)):
+				myPLAYER_STATE = PLAYER_STATE.IDLE
+				return
 		#-------------------------------------------------------------------------------
 	#-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
@@ -517,14 +539,14 @@ func ApplyGround(_result:Dictionary):
 	move_and_slide()
 #-------------------------------------------------------------------------------
 func ApplyRootMotion(_delta:float, _rootVelocity: Vector3):
-	var _f: float = 0.1 * framesInOneSecond * _delta
+	var _f: float = 0.1 * deltaTimeScale
 	currentVelocity = lerp(currentVelocity, Vector3.ZERO, _f)
 	var _velocity: Vector3 = currentVelocity + _rootVelocity
 	velocity.x = _velocity.x
 	velocity.z = _velocity.z
 	#-------------------------------------------------------------------------------
 	if(canRotate):
-		Handle_Rotation(_delta, 0.15)
+		Handle_Input_Rotation(_delta, rotation_Speed)
 #-------------------------------------------------------------------------------
 func Handle_Combos():
 	if(Input.is_action_just_pressed(attackInput)):
@@ -533,7 +555,7 @@ func Handle_Combos():
 			AnimationSpeed_WithCopy(animName_Combo1, comboFastMotion)
 			isInSlowMotion = false
 #-------------------------------------------------------------------------------
-func Handle_Movement(_delta:float, _normalSpeed:float, _runSpeed:float, _weight:float):
+func Handle_Input_Movement(_delta:float, _normalSpeed:float, _runSpeed:float, _weight:float):
 	if(input_dir != Vector2.ZERO):
 		var _targetDir: Vector3
 		if(Input.is_action_pressed(runInput)):
@@ -541,22 +563,22 @@ func Handle_Movement(_delta:float, _normalSpeed:float, _runSpeed:float, _weight:
 			_targetDir += cameraHolder.transform.basis.x * input_dir_raw.x
 			_targetDir.y = 0.0
 			_targetDir.normalized()
-			Handle_Movement2(_delta, _targetDir.x * _runSpeed, _targetDir.z * _runSpeed, _weight)
+			Handle_Movement(_delta, _targetDir.x * _runSpeed, _targetDir.z * _runSpeed, _weight)
 			AnimationTree_SetLocomotion2(_delta, _targetDir.x * 2.0, _targetDir.z * 2.0)
 		else:
 			_targetDir = cameraHolder.transform.basis.z * input_dir.y
 			_targetDir += cameraHolder.transform.basis.x * input_dir.x
 			_targetDir.y = 0.0
 			_targetDir.normalized()
-			Handle_Movement2(_delta, _targetDir.x * _normalSpeed, _targetDir.z * _normalSpeed, _weight)
+			Handle_Movement(_delta, _targetDir.x * _normalSpeed, _targetDir.z * _normalSpeed, _weight)
 			#AnimationTree_SetLocomotion(velocity.x, velocity.z, _normalSpeed)	#Esta linea si quiero que cuando choque con una pared, la animacion cambie.
 			AnimationTree_SetLocomotion2(_delta, _targetDir.x, _targetDir.z) 
 	else:
-		Handle_Movement2(_delta, 0.0, 0.0, _weight)
+		Handle_Movement(_delta, 0.0, 0.0, _weight)
 		AnimationTree_SetLocomotion2(_delta, 0.0, 0.0)
 #-------------------------------------------------------------------------------
-func Handle_Movement2(_delta:float, _x:float, _z:float, _weight:float):
-	var _f: float = _weight * framesInOneSecond * _delta
+func Handle_Movement(_delta:float, _x:float, _z:float, _weight:float):
+	var _f: float = _weight * deltaTimeScale
 	velocity.x = lerp(velocity.x, _x, _f)
 	velocity.z = lerp(velocity.z, _z, _f)
 #-------------------------------------------------------------------------------
@@ -568,23 +590,25 @@ func Roll_Movement(_speed:float):
 		_targetDir.y = 0.0
 		_targetDir.normalized()
 		currentVelocity = _targetDir * _speed
+		currentAngle = atan2(_targetDir.x, _targetDir.z)
 	else:
 		var currentRoot: Quaternion = transform.basis.get_rotation_quaternion()
 		currentVelocity = currentRoot.normalized()* Vector3.BACK * _speed
+		currentAngle = atan2(currentVelocity.x, currentVelocity.z)
 #-------------------------------------------------------------------------------
-func Roll_Rotation(_delta:float, _weight:float):
-	var _f: float = _weight * framesInOneSecond * _delta
-	global_rotation.y = lerp_angle(global_rotation.y, atan2(currentVelocity.x, currentVelocity.z), _f)
-#-------------------------------------------------------------------------------
-func Handle_Rotation(_delta:float, _weight:float):
+func Handle_Input_Rotation(_delta:float, _weight:float):
 	if(input_dir != Vector2.ZERO):
 		var _targetDir: Vector3
 		_targetDir = cameraHolder.transform.basis.z * input_dir_raw.y
 		_targetDir += cameraHolder.transform.basis.x * input_dir_raw.x
 		_targetDir.y = 0.0
 		_targetDir.normalized()
-		var _f: float = _weight * framesInOneSecond * _delta
-		global_rotation.y = lerp_angle(global_rotation.y, atan2(_targetDir.x, _targetDir.z), _f)
+		currentAngle = atan2(_targetDir.x, _targetDir.z)
+	Handle_Rotation(_delta, _weight)
+#-------------------------------------------------------------------------------
+func Handle_Rotation(_delta:float, _weight:float):
+	var _f: float = _weight * deltaTimeScale
+	global_rotation.y = lerp_angle(global_rotation.y, currentAngle, _f)
 #-------------------------------------------------------------------------------
 func GroundCollision(_to:float) -> Dictionary:
 	var _hitDictionary: Array[Dictionary] = []
@@ -715,11 +739,11 @@ func LockOff():
 	isLockOn = false
 #-------------------------------------------------------------------------------
 func CameraFollow(_delta:float):
-	var _f:float = cameraWeight * framesInOneSecond * _delta
+	var _f:float = cameraWeight * deltaTimeScale
 	cameraHolder.position = lerp(cameraHolder.position, position, _f)
 #-------------------------------------------------------------------------------
 func CameraRotation(_delta:float, _x:float, _y:float, _scale:float):
-	var _newScale: float = _scale*framesInOneSecond*_delta
+	var _newScale: float = _scale * deltaTimeScale
 	cameraHolder.rotate_y(deg_to_rad(-_x*_newScale))
 	cameraPivot.rotate_x(deg_to_rad(-_y*_newScale))
 	cameraPivot.rotation.x = clamp(cameraPivot.rotation.x, deg_to_rad(cameraAngleMin), deg_to_rad(cameraAngleMax))
@@ -730,7 +754,7 @@ func CameraLockOn(_delta:float):
 	var _v3: Vector3 = _to- _from
 	var _hypotenuse: float = pow(pow(_v3.x,2)+pow(_v3.z,2),0.5)
 	#-------------------------------------------------------------------------------
-	var _f: float = 0.2 * framesInOneSecond * _delta
+	var _f: float = 0.2 * deltaTimeScale
 	cameraHolder.rotation.y = lerp_angle(cameraHolder.rotation.y, atan2(-_v3.x, -_v3.z), _f)
 	cameraPivot.rotation.x = lerp_angle(cameraPivot.rotation.x, atan2(_v3.y, _hypotenuse), _f)
 	cameraPivot.rotation.x = clamp(cameraPivot.rotation.x, deg_to_rad(cameraAngleMin), deg_to_rad(cameraAngleMax))
@@ -793,7 +817,7 @@ func AnimationTree_SetLocomotion(_delta:float, _x:float, _y:float, _velocity:flo
 	AnimationTree_SetLocomotion2(_delta, _v2.x, _v2.y)
 #-------------------------------------------------------------------------------
 func AnimationTree_SetLocomotion2(_delta:float, _x:float, _y:float) -> void:
-	var _f: float = animWeight * framesInOneSecond * _delta
+	var _f: float = animWeight * deltaTimeScale
 	animVelocity = lerp(animVelocity, Vector2(_x,_y), _f)
 	AnimationTree_BlendSpace1D_Set("Locomotion", animVelocity.length())
 #-------------------------------------------------------------------------------

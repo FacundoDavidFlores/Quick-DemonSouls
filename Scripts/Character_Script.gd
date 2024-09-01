@@ -1,8 +1,9 @@
 extends CharacterBody3D
 class_name Character_Script
 #region VARIABLES
-enum PLAYER_STATE{IDLE, ATTACK, DODGE, ITEM}
+enum PLAYER_STATE{IDLE, ATTACK, DODGE, ITEM, BLOCKING}
 enum COLLISSION_STATE{GROUND, AIR}
+enum GROUND_STATE{STANDING_STILL, MOVING}
 enum JUMP_STATE{LIGHT_JUMP, HEAVY_JUMP, FALL, TERMINAL_VELOCITY}
 #-------------------------------------------------------------------------------
 @onready var model: Node3D = $"model"
@@ -10,8 +11,13 @@ enum JUMP_STATE{LIGHT_JUMP, HEAVY_JUMP, FALL, TERMINAL_VELOCITY}
 @export var gameSystem: GameSystem_Script
 @export var animation_tree: AnimationTree
 @export var collider: CollisionShape3D
-const framesInOneSecond: float = 60
+var deltaTimeScale: float = 1
 const animName_Copy: StringName = "_copy"
+#endregion
+#-------------------------------------------------------------------------------
+#region MONOVEHAVIOUR
+func _physics_process(_delta:float) -> void:
+	deltaTimeScale = _delta * 60
 #endregion
 #-------------------------------------------------------------------------------
 #region CHARACTER FUNCTIONS

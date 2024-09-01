@@ -39,8 +39,10 @@ func _ready():
 	await NavigateFixer()
 #-------------------------------------------------------------------------------
 func _physics_process(_delta:float):
+	super._physics_process(_delta)
+	#-------------------------------------------------------------------------------
 	var _playback: AnimationNodeStateMachinePlayback = animation_tree.get(stateMachine_path+animName_Hurt+"/playback")
-	label3D.text = ENEMY_STATE.keys()[myENEMY_STATE] +"-"+ AnimationTree_Transition_Get(animName_BaseBody)
+	label3D.text = ENEMY_STATE.keys()[myENEMY_STATE] +"-"+ AnimationTree_Transition_Get(animName_BaseBody) +" "+str(deltaTimeScale)
 	match(myENEMY_STATE):
 		ENEMY_STATE.PATROLLING:
 			Patrolling(_delta)
@@ -91,7 +93,7 @@ func Navigate(_delta:float):
 #-------------------------------------------------------------------------------
 func Handle_Rotation(_delta:float, _weight:float):
 	if(velocity != Vector3.ZERO):
-		var _f: float = _weight * framesInOneSecond * _delta
+		var _f: float = _weight * deltaTimeScale
 		model.global_rotation.y = lerp_angle(model.global_rotation.y, atan2(velocity.x, velocity.z), _f)
 #endregion
 #-------------------------------------------------------------------------------
@@ -99,7 +101,7 @@ func Handle_Rotation(_delta:float, _weight:float):
 func AnimationTree_SetLocomotion(_delta:float, _velocity:float) -> void:
 	var _v2: Vector2 = Vector2(velocity.x, velocity.z)
 	_v2 = _v2/_velocity
-	var _f: float = animWeight * framesInOneSecond * _delta
+	var _f: float = animWeight * deltaTimeScale
 	animVelocity = lerp(animVelocity, _v2, _f)
 	AnimationTree_SetBlendPosition1(animName_Locomotion, animVelocity.length())
 #-------------------------------------------------------------------------------
