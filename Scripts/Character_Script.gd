@@ -17,7 +17,7 @@ const animName_Copy: StringName = "_copy"
 #-------------------------------------------------------------------------------
 #region MONOVEHAVIOUR
 func _physics_process(_delta:float) -> void:
-	deltaTimeScale = _delta * 60
+	deltaTimeScale = Engine.time_scale
 #endregion
 #-------------------------------------------------------------------------------
 #region CHARACTER FUNCTIONS
