@@ -33,7 +33,7 @@ const animName_Combo3: StringName = "Combo3"
 #-------------------------------------------------------------------------------
 const animWeight: float = 0.1
 const blendWeight: float = 0.1
-
+#-------------------------------------------------------------------------------
 var animVelocity: Vector2
 var currentVelocity: Vector3
 var currentAngle: float
@@ -104,6 +104,10 @@ const lightJump_GravityScale : float = 3.0
 const heavyJump_GravityScale : float = 6.0
 const fall_GravityScale : float = 4.5
 #-------------------------------------------------------------------------------
+var currentRoot:Quaternion
+var rootMotion: Vector3
+var rootVelocity: Vector3
+#-------------------------------------------------------------------------------
 var blockingTimer: float = 0
 #endregion
 #-------------------------------------------------------------------------------
@@ -120,6 +124,9 @@ func _ready():
 	LockOff()
 #-------------------------------------------------------------------------------
 func _process(_delta:float) -> void:
+	currentRoot = transform.basis.get_rotation_quaternion()
+	rootMotion = animation_tree.get_root_motion_position()
+	rootVelocity = currentRoot.normalized() * rootMotion/_delta
 	CameraCollision()
 #-------------------------------------------------------------------------------
 func _physics_process(_delta:float) -> void:
@@ -131,10 +138,6 @@ func _physics_process(_delta:float) -> void:
 	#-------------------------------------------------------------------------------
 	Camera_StateMachine(_delta, input_camera.x, input_camera.y, 4.5)
 	#-------------------------------------------------------------------------------
-	var _currentRoot:Quaternion = transform.basis.get_rotation_quaternion()
-	var _rootMotion: Vector3 = animation_tree.get_root_motion_position()
-	#NOTA: No se porque _delta no sirve con _rootMotion abajo, pero esto arregla si utilizo root motion para movermi personaje.
-	var _rootVelocity: Vector3 = _currentRoot.normalized() * _rootMotion/get_process_delta_time()
 	var _blendWeight: float = blendWeight * deltaTimeScale
 	#-------------------------------------------------------------------------------
 	match(myPLAYER_STATE):
@@ -309,7 +312,7 @@ func _physics_process(_delta:float) -> void:
 			#-------------------------------------------------------------------------------
 		#-------------------------------------------------------------------------------
 		PLAYER_STATE.ATTACK:
-			ApplyRootMotion(_delta, _rootVelocity)
+			ApplyRootMotion(_delta, rootVelocity)
 			Handle_Combos()
 			#-------------------------------------------------------------------------------
 			AnimationTree_Blend2_Weight(animName_BaseBody2, 1.0, _blendWeight)
@@ -423,7 +426,7 @@ func _physics_process(_delta:float) -> void:
 #-------------------------------------------------------------------------------
 func _input(event):
 	if(event is InputEventMouseMotion and !isLockOn):
-		CameraRotation(get_process_delta_time(), event.relative.x, event.relative.y, 0.3)
+		CameraRotation(event.relative.x, event.relative.y, 0.3)
 #endregion
 #-------------------------------------------------------------------------------
 #region STATEMACHINE FUNCTIONS
@@ -592,7 +595,6 @@ func Roll_Movement(_speed:float):
 		currentVelocity = _targetDir * _speed
 		currentAngle = atan2(_targetDir.x, _targetDir.z)
 	else:
-		var currentRoot: Quaternion = transform.basis.get_rotation_quaternion()
 		currentVelocity = currentRoot.normalized()* Vector3.BACK * _speed
 		currentAngle = atan2(currentVelocity.x, currentVelocity.z)
 #-------------------------------------------------------------------------------
@@ -730,7 +732,7 @@ func Camera_StateMachine(_delta:float, _x:float, _y:float, _scale:float):
 					LockOn_DotManager()
 					lockOn_Texture.show()
 					return
-			CameraRotation(_delta, _x, _y, _scale)
+			CameraRotation(_x, _y, _scale)
 		#-------------------------------------------------------------------------------
 	#-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
@@ -742,7 +744,7 @@ func CameraFollow(_delta:float):
 	var _f:float = cameraWeight * deltaTimeScale
 	cameraHolder.position = lerp(cameraHolder.position, position, _f)
 #-------------------------------------------------------------------------------
-func CameraRotation(_delta:float, _x:float, _y:float, _scale:float):
+func CameraRotation(_x:float, _y:float, _scale:float):
 	var _newScale: float = _scale * deltaTimeScale
 	cameraHolder.rotate_y(deg_to_rad(-_x*_newScale))
 	cameraPivot.rotate_x(deg_to_rad(-_y*_newScale))
